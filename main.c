@@ -1,117 +1,88 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
+void msg_error(char *msg) {
+    fprintf(stderr, "ERROR: <%s>\n", msg);
+    exit(EXIT_FAILURE);
+}
 
-int main( int argc, char * argv[] )
-{
-    FILE *input;
-    char word[80];
-    char ** array1 = (char**)calloc( 8, sizeof( char* ) );
-    int * array2 = (int*)calloc( 8, sizeof(int));
-    printf("Allocated initial parallel arrays of size 8.\n");
-    int arrsize = 8;
-    int unique_words = 0;
-    int total_words = 0;
-    int to_show = 0;
-    if(argv[2])
-    {
-        to_show = atoi(argv[2]);
-    }
-    input = fopen(argv[1], "r");
-    if(input == NULL)
-    {
-        fprintf(stderr, "ERROR: INVALID COMMAND LINE ARGUMENT");
-        return 1;
-    }
-    while(1)
-    {
-        int unique = 1;
-        int i;
-        for(i = 0; i < 80; i++)
-        {
-            word[i] = 0;
-        }
-        for(i = 0; i < 80; i++)
-        {
-            char temp = fgetc(input);
-            if(!isalnum(temp))
-            {
-                break;
-            }
-            word[i] = temp;
-        }
+struct Process {
+    char id;
+    int arrive;
+    int burst_time;
+    int burst_num;
+    int io;
+};
 
-        
-        if( feof(input) )
-        { 
-            break;
-        }
-        total_words += 1;
-        int j;
-        for(j = 0; j < unique_words; j++)
-        {
-            
-            if( strcmp(array1[j], word) == 0)
-            {
-
-                array2[j] += 1;
-                unique = 0;
-            }
-        }
-        
-        
-        if(unique){
-            if(!strcmp(word, ""))
-            {
-                total_words--;
-                continue;
-            }
-            array1[unique_words] = strdup(word);
-            array2[unique_words] = 1;
-            
-            if(unique_words == arrsize - 1)
-            {
-                int newsize = arrsize * 2;
-                array1 = (char**)realloc(array1, newsize * sizeof(char*));
-                array2 = (int*)realloc(array2, newsize * sizeof(int));
-                arrsize = arrsize * 2;
-                for(j = unique_words+1; j < arrsize - 1; j++)
-                {
-                    array1[j + 1] = NULL;
-                    array2[j + 1] = 0;
-                }
-                printf("Re-allocated parallel arrays to be size %d.\n", arrsize);
-            }
-            unique_words += 1;
-        }
+int next(int *j, char *array_raw) {
+    int init = *j;
+    char line[100];
+    while (array_raw[*j] != '|') {
+        line[*j - init] = array_raw[*j];
+        line[*j - init + 1] = '\0';
+        *j = *j + 1;
     }
-    printf("All done (successfully read %d words; %d unique words).\n", total_words, unique_words);
+    *j = *j + 1;
+    return atoi(line);
+}
+
+int main( int argc, char * argv[]) {
+    // Open File
+    FILE *input = fopen(argv[2], "r"); // for some reason, 1 = main.c, 2 = filename?
+    if (input == NULL) msg_error("could not read file");
     
-    if(to_show == 0)
-    {
-        to_show = unique_words;
-        printf("All words (and corresponding counts) are:\n");
+    // Get all lines from file
+    char line[100];
+    int size_array = 3;
+    int count = 0;
+    char **array_raw = (char**) calloc(size_array, sizeof(char*));
+    while (fgets(line, sizeof(line), input) != NULL) {
+        if (line[0] != '#') {
+            if (count >= size_array) {
+                size_array = size_array * 2;
+                array_raw = realloc(array_raw, size_array * sizeof(char*));
+                if (array_raw == NULL) msg_error("memory for array_raw not re-allocated");
+            }
+            array_raw[count] = malloc(strlen(line) + 1);
+            strcpy(array_raw[count], line);
+            count += 1;
+        }
     }
-    else
-    {
-        printf("First %d words (and corresponding counts) are:\n", to_show);
-    }
+    fclose(input);
+    
+    // Seperate lines into different arrays based on data type
+    struct Process *array = (struct Process*) calloc(count - 1, sizeof(struct Process));
     int i;
-    for(i = 0; i < to_show; i++)
-    {
-        printf("%s", array1[i]);
-        printf(" -- %d\n", array2[i]);
+    int j;
+    int init;
+    for (i = 0; i < count; i++) {
+        array[i].id = array_raw[i][0];
+        j = 2;
+        array[i].arrive = next(&j, array_raw[i]);
+        array[i].burst_time = next(&j, array_raw[i]);
+        array[i].burst_num = next(&j, array_raw[i]);
+        // Problem: when trying to set io with next, *** stack smashing detected ***
+        init = j;
+        strcpy(line, "");
+        while (array_raw[i][j] != '|' && j < strlen(array_raw[i])) {
+            line[j - init] = array_raw[i][j];
+            line[j - init + 1] = '\0';
+            j++;
+        }
+        array[i].io = atoi(line);
+        free(array_raw[i]);
     }
-    for(i = 0; i < arrsize; i++)
-    {
-        free(array1[i]);
+    free(array_raw);
+    
+    // Print out results
+    for (i = 0; i < count; i++) {
+        printf("Process %c - arrive: %i, burst time: %i, burst num: %i, io: %i.\n", array[i].id, array[i].arrive, array[i].burst_time, array[i].burst_num, array[i].io);
     }
-    free(array1);
-    free(array2);
-    free(input);
-    return 0;
+    fflush(stdout);
+    
+    // Problem: can't just free(array), dunno how to deallocate it
+    
+    exit(EXIT_SUCCESS);
 }
