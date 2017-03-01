@@ -57,7 +57,7 @@ int main( int argc, char * argv[]) {
     }
     fclose(input);
     
-    // Seperate lines into different arrays based on data type
+    // Create Processes
     struct Process *array = (struct Process*) calloc(count - 1, sizeof(struct Process));
     int i;
     int j;
@@ -89,19 +89,19 @@ int main( int argc, char * argv[]) {
     
     // First Come First Serve (FCFS)
     int t = 0;
-    msg_event(t, "Simulator started for FCFS [Q <empty>]");
+    //msg_event(t, "Simulator started for FCFS [Q <empty>]");
     // TBA - probably should isolate in sub-functions
-    msg_event(t, "Simulator ended for FCFS");
+    //msg_event(t, "Simulator ended for FCFS");
     
     // Shortest Remaining Time (SRT)
-    msg_event(t, "Simulator started for SRT [Q <empty>]");
+    //msg_event(t, "Simulator started for SRT [Q <empty>]");
     // TBA - probably should isolate in sub-functions
-    msg_event(t, "Simulator ended for SRT");
+    //msg_event(t, "Simulator ended for SRT");
     
     // Round Robin (RR)
-    msg_event(t, "Simulator started for RR [Q <empty>]");
+    //msg_event(t, "Simulator started for RR [Q <empty>]");
     // TBA - probably should isolate in sub-functions
-    msg_event(t, "Simulator ended for RR");
+    //msg_event(t, "Simulator ended for RR");
     
     // TBA: output file stuff, don't forget to check if file can be opened (same process/error as w/ source file)
     
