@@ -4,8 +4,13 @@
 #include <ctype.h>
 
 void msg_error(char *msg) {
-    fprintf(stderr, "ERROR: <%s>\n", msg);
+    fprintf(stderr, "ERROR: %s\n", msg);
     exit(EXIT_FAILURE);
+}
+
+void msg_event(int t, char *msg) {
+    printf("time %ims: %s\n", t, msg);
+    fflush(stdout);
 }
 
 struct Process {
@@ -31,7 +36,7 @@ int next(int *j, char *array_raw) {
 int main( int argc, char * argv[]) {
     // Open File
     FILE *input = fopen(argv[2], "r"); // for some reason, 1 = main.c, 2 = filename?
-    if (input == NULL) msg_error("could not read file");
+    if (input == NULL) msg_error("Invalid input file format");
     
     // Get all lines from file
     char line[100];
@@ -76,13 +81,30 @@ int main( int argc, char * argv[]) {
     }
     free(array_raw);
     
-    // Print out results
+    // Print out results (TBA: remove)
     for (i = 0; i < count; i++) {
         printf("Process %c - arrive: %i, burst time: %i, burst num: %i, io: %i.\n", array[i].id, array[i].arrive, array[i].burst_time, array[i].burst_num, array[i].io);
     }
     fflush(stdout);
     
-    // Problem: can't just free(array), dunno how to deallocate it
+    // First Come First Serve (FCFS)
+    int t = 0;
+    msg_event(t, "Simulator started for FCFS [Q <empty>]");
+    // TBA - probably should isolate in sub-functions
+    msg_event(t, "Simulator ended for FCFS");
     
+    // Shortest Remaining Time (SRT)
+    msg_event(t, "Simulator started for SRT [Q <empty>]");
+    // TBA - probably should isolate in sub-functions
+    msg_event(t, "Simulator ended for SRT");
+    
+    // Round Robin (RR)
+    msg_event(t, "Simulator started for RR [Q <empty>]");
+    // TBA - probably should isolate in sub-functions
+    msg_event(t, "Simulator ended for RR");
+    
+    // TBA: output file stuff, don't forget to check if file can be opened (same process/error as w/ source file)
+    
+    // Problem: can't just free(array), dunno how to deallocate it
     exit(EXIT_SUCCESS);
 }
