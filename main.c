@@ -45,7 +45,7 @@ void first_come_first_serve(struct Process *array, int arrsize, int t_cs, int *t
         //Add context switch time
     }
     //Average all the times
-    burst_time /= arrsize;
+    *burst_time /= arrsize;
     *turnaround_time /= arrsize;
     *wait_time /= arrsize;
 }
