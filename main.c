@@ -21,33 +21,33 @@ struct Process {
     int io;
 };
 
-void first_come_first_serve(struct Process *array, int arrsize, int t_cs, int turnaround_time, int burst_time, int wait_time){
+void first_come_first_serve(struct Process *array, int arrsize, int t_cs, int *turnaround_time, int *burst_time, int *wait_time){
     int i;
-    turnaround_time = 0;
-    burst_time = 0;
-    wait_time = 0;
+    *turnaround_time = 0;
+    *burst_time = 0;
+    *wait_time = 0;
     //Working under the assumption that they come are in the file sorted by arrival time, can change later if that's not the case
     for(i = 0; i < arrsize; i++){
         //If I/O time needs to be calculated
         if(array[i].burst_num > 0){
             // burst_num * burst_times for time spent bursting, and then add the time spent in io between each one
-            turnaround_time += (array[i].burst_num * array[i].burst_time) + (array[i].io * array[i].burst_num);
+            *turnaround_time += (array[i].burst_num * array[i].burst_time) + (array[i].io * array[i].burst_num);
             // Just the burst times
-            burst_time += (array[i].burst_num * array[i].burst_time);
+            *burst_time += (array[i].burst_num * array[i].burst_time);
         }
         else{
             //As above, but only once
-            turnaround_time += array[i].burst_time;
-            burst_time += array[i].burst_time;
+            *turnaround_time += array[i].burst_time;
+            *burst_time += array[i].burst_time;
         }
-        wait_time += t_cs;
-        turnaround_time += t_cs;
+        *wait_time += t_cs;
+        *turnaround_time += t_cs;
         //Add context switch time
     }
     //Average all the times
     burst_time /= arrsize;
-    turnaround_time /= arrsize;
-    wait_time /= arrsize;
+    *turnaround_time /= arrsize;
+    *wait_time /= arrsize;
 }
 
 int next(int *j, char *array_raw) {
