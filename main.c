@@ -8,9 +8,33 @@ struct Process {
     char id;
     int arrive;
     int burst_time;
+    int burst_left;
     int burst_num;
     int io;
+    int io_left;
+    int wait_time;
 };
+
+void srt_add(struct Process *array, struct Process proc, int *arrsize){
+    int i;
+    struct Process temp;
+    arrsize++;
+    array[*arrsize - 1] = proc;
+    for(i = 0; i < *arrsize; i++){
+        int j;
+        while(j > 0 && array[j - 1].burst_time > array[j].burst_time){
+            temp = array[j];
+            array[j] = array[j - 1];
+            array[j - 1] = temp;
+            j -= 1;
+        }
+    }
+    //Just insertion sort by burst_time for srt, shortest burst_time should be at [0] after every call
+    //Right now the array comes in with the free space (add 1 to arrsize before passing it)
+    //Could probably change that to happen in the function so we have some wiggle room with error checking
+    //We should only need to do this when each process arrives for the first time and every time something comes back from block
+    //Also we need to check afterwords to see if it has a shorter time than the thing in the running thing, and if it does we need to preempt it
+}
 
 void msg_error(char *msg) {
     fprintf(stderr, "ERROR: %s\n", msg);
@@ -44,35 +68,6 @@ void msg_event_q_i(int t, char id, char *msg, char *msg2, int i, struct Process 
 
 void msg_event_q(int t, char id, char *msg, struct Process *ready, int n) {
     msg_event_q_i(t, id, msg, "", 0, ready, n);
-}
-
-void first_come_first_serve(struct Process *array, int arrsize, int t_cs, int *turnaround_time, int *burst_time, int *wait_time){
-    int i;
-    *turnaround_time = 0;
-    *burst_time = 0;
-    *wait_time = 0;
-    //Working under the assumption that they come are in the file sorted by arrival time, can change later if that's not the case
-    for(i = 0; i < arrsize; i++){
-        //If I/O time needs to be calculated
-        if(array[i].burst_num > 0){
-            // burst_num * burst_times for time spent bursting, and then add the time spent in io between each one
-            *turnaround_time += (array[i].burst_num * array[i].burst_time) + (array[i].io * array[i].burst_num);
-            // Just the burst times
-            *burst_time += (array[i].burst_num * array[i].burst_time);
-        }
-        else{
-            //As above, but only once
-            *turnaround_time += array[i].burst_time;
-            *burst_time += array[i].burst_time;
-        }
-        *wait_time += t_cs;
-        *turnaround_time += t_cs;
-        //Add context switch time
-    }
-    //Average all the times
-    *burst_time /= arrsize;
-    *turnaround_time /= arrsize;
-    *wait_time /= arrsize;
 }
 
 int next(int *j, char *array_raw) {
@@ -165,24 +160,107 @@ int main(int argc, char * argv[]) {
     int ready_max = ready_n;
     int waiting_max = waiting_n;
     struct Process running;
+    struct Process *blocked = (struct Process*) calloc(ready_max, sizeof(struct Process));
+    int block_n = 0;
     while (ready_n > 0) {
-        running = ready[0];
+        running = ready[0]; //Add the first process in queue to running
         for (i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
         ready_n--;
         t += t_cs/2;
+        
+        //TBA: Send a message when a process arrives, also we need to figure this out for SRT, as it can cause preemptions
         msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
         while (running.burst_num > 0) {
-            t += running.burst_time;
-            running.burst_num--;
+            t += 1;
+            running.burst_left--;
+            if(running.burst_left < 1){
+                msg_event_q_i(t, running.id, "completed a CPU burst;", "bursts to go", running.burst_num, ready, ready_n);
+                if(running.burst_num > 0){//Needs to be added to blocked
+                    block_n++;
+                    blocked[block_n - 1] = running;
+                    //Somehow set it up so that the io knows when it's done
+                    if(ready_n == 0) //There's nothing left to run
+                    {
+                        break;
+                    }
+                    running = ready[0];
+                    running.burst_left = running.burst_time;
+                    for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
+                    ready_n--;
+                    t += t_cs; //Context switch time
+                    
+                }
+                else { //Leave the gun, take the cannoli
+                    if(ready_n == 0){
+                        break;
+                    }
+                    running = ready[0]; //Set running to the next available process
+                    running.burst_left = running.burst_time;
+                    for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
+                    ready_n--;
+                    t += t_cs; //Context switch time
+                }
+            }
+            int j;
+            for(j = 1; j < block_n; j++){ //Check which blocked items have finished their I/O stuff while CPU burst was happening
+                blocked[j - 1].io_left -= 1;
+                if(blocked[j - 1].io_left < 0){ // It finished I/O, let's put it back in readyqueue
+                    if(ready_n == 0){
+                        break;
+                    }
+                    //TBA:Message should be sent here, but Darien has this weird function for building messages so she can do that
+                    ready_n++;
+                    ready[ready_n - 1] = blocked[j - 1]; // Add it back to the readyqueue (for FCFS, we just put it at the end)
+                    int h;
+                    for(h = j; h < block_n; h++) blocked[h - 1] = blocked[h]; // Remove it from the blocked list (It's not really a queue)
+                    block_n--;
+                }
+            }
+            for(j = 1; j < ready_n; j++){
+                ready[ready_n - 1].wait_time += 1;
+            }
+            for(j = 1; j < waiting_n; j++){
+                if(waiting[j - 1].arrive < t){ //Should've arrived in between those starbursts
+                    ready_n++;
+                    ready[ready_n - 1] = waiting[j - 1]; //Add it to ready queue
+                    //TBA:Message should be sent here, but Darien has this weird function for building messages so she can do that
+                    int h;
+                    for(h = j; h < waiting_n; h++) waiting[h - 1] = waiting[h]; //Remove it from waiting queue
+                    waiting_n--;
+                }
+            }
             msg_event_q_i(t, running.id, "completed a CPU burst;", "bursts to go", running.burst_num, ready, ready_n);
+            if(running.burst_num > 0){//Needs to be added to blocked
+                block_n++;
+                blocked[block_n - 1] = running;
+                //Somehow set it up so that the io knows when it's done
+                if(ready_n == 0) //There's nothing left to run
+                {
+                    break;
+                }
+                running = ready[0];
+                running.burst_left = running.burst_time;
+                for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
+                ready_n--;
+                t += t_cs; //Context switch time
+                
+            }
+            else { //Leave the gun, take the cannoli
+                if(ready_n == 0){
+                    break;
+                }
+                running = ready[0]; //Set running to the next available process
+                running.burst_left = running.burst_time;
+                for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
+                ready_n--;
+                t += t_cs; //Context switch time
+            }
+            
         }
-        // TBA: currently, bursts until finished; needs to burst once, then be added to blocked, re-added later
-        // TBA: continue simulation, add waiting, etc
     }
     msg_event(t, "Simulator ended for FCFS");
-    
-    // TBA: Shortest Remaining Time (SRT)
-    
+    // TBA: Deallocate all the ready and waiting arrays so they're ready to use again for SRT?
+
     // TBA: Round Robin (RR)
     
     // TBA: output file stuff, don't forget to check if file can be opened (same process/error as w/ source file)
