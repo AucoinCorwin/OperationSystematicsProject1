@@ -68,7 +68,7 @@ int main(int argc, char * argv[]) {
     fclose(input);
     
     // Create Processes
-    struct Process *array = (struct Process*) calloc(n - 1, sizeof(struct Process));
+    struct Process *array = (struct Process*) calloc(n, sizeof(struct Process));
     int i;
     int j;
     int init;
