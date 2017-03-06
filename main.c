@@ -3,17 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
-
-struct Process {
-    char id;
-    int arrive;
-    int burst_time;
-    int burst_left;
-    int burst_num;
-    int io;
-    int io_left;
-    int wait_time;
-};
+#include "msg.h"
 
 void srt_add(struct Process *array, struct Process proc, int *arrsize){
     int i;
@@ -29,45 +19,11 @@ void srt_add(struct Process *array, struct Process proc, int *arrsize){
             j -= 1;
         }
     }
-    //Just insertion sort by burst_time for srt, shortest burst_time should be at [0] after every call
-    //Right now the array comes in with the free space (add 1 to arrsize before passing it)
-    //Could probably change that to happen in the function so we have some wiggle room with error checking
-    //We should only need to do this when each process arrives for the first time and every time something comes back from block
-    //Also we need to check afterwords to see if it has a shorter time than the thing in the running thing, and if it does we need to preempt it
-}
-
-void msg_error(char *msg) {
-    fprintf(stderr, "ERROR: %s\n", msg);
-    exit(EXIT_FAILURE);
-}
-
-void msg_event(int t, char *msg) {
-    printf("time %ims: %s\n", t, msg);
-    fflush(stdout);
-}
-
-void msg_event_q_i(int t, char id, char *msg, char *msg2, int i, struct Process *ready, int n) {
-    printf("time %ims: ", t);
-    if (id != ' ') printf("Process %c ", id); // Assume a process can't have an id of ' '
-    printf("%s ", msg);
-    if (strcmp(msg2, "") != 0) printf("%i %s ", i, msg2);
-    printf("[Q ");
-    if (n == 0) printf("<empty>");
-    else {
-        int i;
-        bool first = true;
-        for (i = 0; i < n; i++) {
-            if (first) first = false;
-            else printf(" ");
-            printf("%c", ready[i].id);
-        }
-    }
-    printf("]\n");
-    fflush(stdout);
-}
-
-void msg_event_q(int t, char id, char *msg, struct Process *ready, int n) {
-    msg_event_q_i(t, id, msg, "", 0, ready, n);
+    // Just insertion sort by burst_time for srt, shortest burst_time should be at [0] after every call
+    // Right now the array comes in with the free space (add 1 to arrsize before passing it)
+    // Could probably change that to happen in the function so we have some wiggle room with error checking
+    // We should only need to do this when each process arrives for the first time and every time something comes back from block
+    // Also we need to check afterwords to see if it has a shorter time than the thing in the running thing, and if it does we need to preempt it
 }
 
 int next(int *j, char *array_raw) {
@@ -138,120 +94,99 @@ int main(int argc, char * argv[]) {
     // First Come First Serve (FCFS)
     int t = 0;
     int ready_n = 0;
-    struct Process *ready = (struct Process*) calloc(ready_n, sizeof(struct Process));
+    struct Process *ready = (struct Process*) calloc(n, sizeof(struct Process));
     int waiting_n = 0;
-    struct Process *waiting = (struct Process*) calloc(waiting_n, sizeof(struct Process));
+    struct Process *waiting = (struct Process*) calloc(n, sizeof(struct Process));
     msg_event_q(t, ' ', "Simulator started for FCFS", ready, ready_n);
     for (i = 0; i < n; i++) {
         if (array[i].arrive <= t) {
             ready_n++;
-            ready = realloc(ready, ready_n * sizeof(struct Process*));
-            if (ready == NULL) msg_error("memory for ready not re-allocated");
             ready[ready_n - 1] = array[i];
             msg_event_q(t, ready[ready_n - 1].id, "arrived and added to ready queue", ready, ready_n);
         }
         else {
             waiting_n++;
-            waiting = realloc(waiting, waiting_n * sizeof(struct Process*));
-            if (waiting == NULL) msg_error("memory for waiting not re-allocated");
             waiting[waiting_n - 1] = array[i];
         }
     }
-    int ready_max = ready_n;
-    int waiting_max = waiting_n;
     struct Process running;
-    struct Process *blocked = (struct Process*) calloc(ready_max, sizeof(struct Process));
-    int block_n = 0;
+    struct Process *blocked = (struct Process*) calloc(n, sizeof(struct Process));
+    int blocked_n = 0;
     while (ready_n > 0) {
-        running = ready[0]; //Add the first process in queue to running
+        running = ready[0]; // Add the first process in queue to running
         for (i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
         ready_n--;
         t += t_cs/2;
         
-        //TBA: Send a message when a process arrives, also we need to figure this out for SRT, as it can cause preemptions
+        // TBA: Send a message when a process arrives, also we need to figure this out for SRT, as it can cause preemptions
         msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
         while (running.burst_num > 0) {
             t += 1;
             running.burst_left--;
-            if(running.burst_left < 1){
-                msg_event_q_i(t, running.id, "completed a CPU burst;", "bursts to go", running.burst_num, ready, ready_n);
-                if(running.burst_num > 0){//Needs to be added to blocked
-                    block_n++;
-                    blocked[block_n - 1] = running;
-                    //Somehow set it up so that the io knows when it's done
-                    if(ready_n == 0) //There's nothing left to run
-                    {
-                        break;
-                    }
+            if (running.burst_left < 1) {
+                msg_event_q_i(t, running.id, "completed a CPU burst;", "bursts to go", running.burst_num - 1, ready, ready_n);
+                if (running.burst_num > 0) { // Needs to be added to blocked
+                    blocked_n++;
+                    blocked[blocked_n - 1] = running;
+                    // Somehow set it up so that the io knows when it's done
+                    if (ready_n == 0) break; // Break if here's nothing left to run
                     running = ready[0];
                     running.burst_left = running.burst_time;
-                    for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
+                    for (i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
                     ready_n--;
-                    t += t_cs; //Context switch time
-                    
+                    t += t_cs; // Context switch time
                 }
-                else { //Leave the gun, take the cannoli
-                    if(ready_n == 0){
-                        break;
-                    }
-                    running = ready[0]; //Set running to the next available process
+                else { // Leave the gun, take the cannoli
+                    if (ready_n == 0) break;
+                    running = ready[0]; // Set running to the next available process
                     running.burst_left = running.burst_time;
                     for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
                     ready_n--;
-                    t += t_cs; //Context switch time
+                    t += t_cs; // Context switch time
                 }
             }
             int j;
-            for(j = 1; j < block_n; j++){ //Check which blocked items have finished their I/O stuff while CPU burst was happening
+            for (j = 1; j < blocked_n; j++) { // Check which blocked items have finished their I/O stuff while CPU burst was happening
                 blocked[j - 1].io_left -= 1;
-                if(blocked[j - 1].io_left < 0){ // It finished I/O, let's put it back in readyqueue
-                    if(ready_n == 0){
-                        break;
-                    }
-                    //TBA:Message should be sent here, but Darien has this weird function for building messages so she can do that
+                if (blocked[j - 1].io_left < 0) { // It finished I/O, let's put it back in the ready queue
+                    if (ready_n == 0) break;
+                    // TBA: Message should be sent here, but Darien has this weird function for building messages so she can do that
                     ready_n++;
-                    ready[ready_n - 1] = blocked[j - 1]; // Add it back to the readyqueue (for FCFS, we just put it at the end)
+                    ready[ready_n - 1] = blocked[j - 1]; // Add it back to the ready queue (for FCFS, we just put it at the end)
                     int h;
-                    for(h = j; h < block_n; h++) blocked[h - 1] = blocked[h]; // Remove it from the blocked list (It's not really a queue)
-                    block_n--;
+                    for (h = j; h < blocked_n; h++) blocked[h - 1] = blocked[h]; // Remove it from the blocked list (It's not really a queue)
+                    blocked_n--;
                 }
             }
-            for(j = 1; j < ready_n; j++){
-                ready[ready_n - 1].wait_time += 1;
-            }
-            for(j = 1; j < waiting_n; j++){
-                if(waiting[j - 1].arrive < t){ //Should've arrived in between those starbursts
+            for (j = 1; j < ready_n; j++) ready[ready_n - 1].wait_time += 1;
+            for (j = 1; j < waiting_n; j++) {
+                if (waiting[j - 1].arrive < t) { // Should've arrived in between those starbursts
                     ready_n++;
-                    ready[ready_n - 1] = waiting[j - 1]; //Add it to ready queue
-                    //TBA:Message should be sent here, but Darien has this weird function for building messages so she can do that
+                    ready[ready_n - 1] = waiting[j - 1]; // Add it to ready queue
+                    // TBA: Message should be sent here, but Darien has this weird function for building messages so she can do that
                     int h;
-                    for(h = j; h < waiting_n; h++) waiting[h - 1] = waiting[h]; //Remove it from waiting queue
+                    for (h = j; h < waiting_n; h++) waiting[h - 1] = waiting[h]; // Remove it from waiting queue
                     waiting_n--;
                 }
             }
             msg_event_q_i(t, running.id, "completed a CPU burst;", "bursts to go", running.burst_num, ready, ready_n);
-            if(running.burst_num > 0){//Needs to be added to blocked
-                block_n++;
-                blocked[block_n - 1] = running;
-                //Somehow set it up so that the io knows when it's done
-                if(ready_n == 0) //There's nothing left to run
-                {
-                    break;
-                }
+            if(running.burst_num > 0) { // Needs to be added to blocked
+                blocked_n++;
+                blocked[blocked_n - 1] = running;
+                // Somehow set it up so that the io knows when it's done
+                if(ready_n == 0) break; // There's nothing left to run
                 running = ready[0];
                 running.burst_left = running.burst_time;
-                for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
+                for (i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
                 ready_n--;
-                t += t_cs; //Context switch time
+                t += t_cs; // Context switch time
                 
             }
-            else { //Leave the gun, take the cannoli
-                if(ready_n == 0){
-                    break;
-                }
+            else { // Leave the gun, take the cannoli
+                if (ready_n == 0) break;
                 running = ready[0]; //Set running to the next available process
                 running.burst_left = running.burst_time;
-                for(i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
+                for (i = 1; i < ready_n; i++) ready[i - 1] = ready[i];
                 ready_n--;
                 t += t_cs; //Context switch time
             }
@@ -260,6 +195,8 @@ int main(int argc, char * argv[]) {
     }
     msg_event(t, "Simulator ended for FCFS");
     // TBA: Deallocate all the ready and waiting arrays so they're ready to use again for SRT?
+
+    // TBA: Shortest Remaining Time (SRT)
 
     // TBA: Round Robin (RR)
     
