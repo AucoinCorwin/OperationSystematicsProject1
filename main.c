@@ -5,25 +5,14 @@
 #include <stdbool.h>
 #include "msg.h"
 
-void srt_add(struct Process *array, struct Process proc, int *arrsize){
+void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n) {
+    msg_space();
+    *t = 0;
+    *ready_n = 0;
+    *waiting_n = n;
     int i;
-    struct Process temp;
-    arrsize++;
-    array[*arrsize - 1] = proc;
-    for(i = 0; i < *arrsize; i++){
-        int j;
-        while(j > 0 && array[j - 1].burst_time > array[j].burst_time){
-            temp = array[j];
-            array[j] = array[j - 1];
-            array[j - 1] = temp;
-            j -= 1;
-        }
-    }
-    // Just insertion sort by burst_time for srt, shortest burst_time should be at [0] after every call
-    // Right now the array comes in with the free space (add 1 to arrsize before passing it)
-    // Could probably change that to happen in the function so we have some wiggle room with error checking
-    // We should only need to do this when each process arrives for the first time and every time something comes back from block
-    // Also we need to check afterwords to see if it has a shorter time than the thing in the running thing, and if it does we need to preempt it
+    running_active = false;
+    blocked_n = 0;
 }
 
 int main(int argc, char * argv[]) {
@@ -90,8 +79,8 @@ int main(int argc, char * argv[]) {
     bool running_active = false;
     struct Process *blocked = (struct Process*) calloc(n, sizeof(struct Process));
     int blocked_n = 0;
-    msg_event_q(t, ' ', "Simulator started for FCFS", ready, ready_n);
     bool increment;
+    msg_event_q(t, ' ', "Simulator started for FCFS", ready, ready_n);
     
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
@@ -128,8 +117,9 @@ int main(int argc, char * argv[]) {
             running.arrive = t + running.burst_time;
             increment = false;
         }
+        // Update time if nothing else has been done this tick
         if (increment) {
-            t += 1;
+            t++;
             // Update running, if possible
             if (running_active && running.arrive <= t) {
                 running.burst_num--;
@@ -152,15 +142,114 @@ int main(int argc, char * argv[]) {
         }
     }
     msg_event(t, "Simulator ended for FCFS");
-    
-    // TBA: Deallocate all the ready and waiting arrays so they're ready to use again for SRT?
 
-    // TBA: Shortest Remaining Time (SRT)
+    // Shortest Remaining Time (SRT)
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
+    for (i = 0; i < n; i++) {
+        waiting[i] = array[i];
+        waiting[i].burst_left = 0;
+    }
+    msg_event_q(t, ' ', "Simulator started for SRT", ready, ready_n);
+    while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
+        increment = true;
+        // Check for new arrivals
+        for (i = 0; i < waiting_n; ++i) {
+            if (waiting[i].arrive <= t) {
+                ready_n++;
+                ready[ready_n - 1] = waiting[i];
+                // Preemptive
+                if (running_active && min(ready[ready_n - 1]) < min(running)) {
+                    char s[2] = "\0";
+                    s[0] = running.id;
+                    msg_event_q_i(t, ready[ready_n - 1].id, "arrived and will preempt", s, 0, ready, ready_n);
+                    ready_n++;
+                    ready[ready_n - 1] = running;
+                    running_active = false;
+                    t += t_cs/2;
+                }
+                // Non-preemptive
+                else msg_event_q(t, ready[ready_n - 1].id, "arrived and added to ready queue", ready, ready_n);
+                waiting_n--;
+                for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
+                increment = false;
+            }
+        }
+        // TBA: Check for finished I/O
+        // Set running, if possible/none already
+        if (increment && !running_active && ready_n > 0) {
+            j = 0;
+            for (i = 0; i < ready_n; i++) if (min(ready[i]) < min(ready[j])) j = i;
+            running = ready[j];
+            running_active = true;
+            ready_n--;
+            for (i = j; i < ready_n; i++) ready[i] = ready[i + 1];
+            t += t_cs/2;
+            msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            running.arrive = t + running.burst_time;
+            increment = false;
+        }
+        // Update time if nothing else has been done this tick
+        if (increment) {
+            t++;
+            // Update running, if possible
+            if (running_active) {
+                if (running.burst_left <= 0) {
+                    running.burst_left = 0;
+                    running.burst_num--;
+                    running_active = false;
+                    // Add to blocked, if possible
+                    if (running.burst_num > 0) {
+                        msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
+                        t += t_cs/2;
+                        running.arrive = t + running.io;
+                        msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", running.arrive, ready, ready_n);
+                        blocked_n++;
+                        blocked[blocked_n - 1] = running;
+                    }
+                    // Terminate if finished
+                    else {
+                        msg_event_q(t, running.id, "terminated", ready, ready_n);
+                        t += t_cs/2;
+                    }
+                }
+                else running.burst_left--;
+            }
+        }
+        if (t > 10) exit(EXIT_FAILURE); // TBA: Remove
+    }
+    /*void srt_add(struct Process *array, struct Process proc, int *arrsize){
+    int i;
+    struct Process temp;
+    arrsize++;
+    array[*arrsize - 1] = proc;
+    for(i = 0; i < *arrsize; i++){
+        int j;
+        while(j > 0 && array[j - 1].burst_time > array[j].burst_time){
+            temp = array[j];
+            array[j] = array[j - 1];
+            array[j - 1] = temp;
+            j -= 1;
+        }
+    }
+    // Just insertion sort by burst_time for srt, shortest burst_time should be at [0] after every call
+    // Right now the array comes in with the free space (add 1 to arrsize before passing it)
+    // Could probably change that to happen in the function so we have some wiggle room with error checking
+    // We should only need to do this when each process arrives for the first time and every time something comes back from block
+    // Also we need to check afterwords to see if it has a shorter time than the thing in the running thing, and if it does we need to preempt it
+    }*/
+    msg_event(t, "Simulator ended for SRT");
 
-    // TBA: Round Robin (RR)
+    // Round Robin (RR)
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
+    for (i = 0; i < n; i++) {
+        waiting[i] = array[i];
+        waiting[i].burst_left = 0;
+    }
+    msg_event_q(t, ' ', "Simulator started for RR", ready, ready_n);
+    // TBA: RR
+    msg_event(t, "Simulator ended for RR");
     
     // TBA: output file stuff, don't forget to check if file can be opened (same process/error as w/ source file)
-    
     // Problem: can't just free(array), dunno how to deallocate it
     exit(EXIT_SUCCESS);
 }

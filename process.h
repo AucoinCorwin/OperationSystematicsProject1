@@ -3,9 +3,14 @@ struct Process {
     int arrive;
     int burst_time;
     int burst_num;
+    int burst_left;
     int io;
     int wait_time;
 };
+
+int min(struct Process p) {
+    return p.burst_left + (p.burst_time * p.burst_num);
+}
 
 int next(int *j, char *array_raw) {
     int init = *j;

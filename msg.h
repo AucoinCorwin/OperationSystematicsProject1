@@ -5,6 +5,11 @@ void msg_error(char *msg) {
     exit(EXIT_FAILURE);
 }
 
+void msg_space() {
+    printf("\n");
+    fflush(stdout);
+}
+
 void msg_event(int t, char *msg) {
     printf("time %ims: %s\n", t, msg);
     fflush(stdout);
