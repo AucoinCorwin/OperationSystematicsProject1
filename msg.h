@@ -1,12 +1,13 @@
 #include "process.h"
 
-void print_time(int t) {
-    printf("time %ims: ", t);
-}
-
 void msg_error(char *msg) {
     fprintf(stderr, "ERROR: %s\n", msg);
     exit(EXIT_FAILURE);
+}
+
+void msg_space() {
+    printf("\n");
+    fflush(stdout);
 }
 
 void msg_queue(struct Process *ready, int n) {
@@ -25,19 +26,18 @@ void msg_queue(struct Process *ready, int n) {
     fflush(stdout);
 }
 
-void msg_space() {
-    printf("\n");
-    fflush(stdout);
+void msg_sim_start(int t, char *algo, struct Process *ready, int n) {
+    printf("time %ims: Simulator started for %s ", t, algo);
+    msg_queue(ready, n);
 }
 
-void msg_event(int t, char *msg) {
-    print_time(t);
-    printf("%s\n", msg);
+void msg_sim_end(int t, char *algo) {
+    printf("time %ims: Simulator ended for %s\n", t, algo);
     fflush(stdout);
 }
 
 void msg_event_q_i(int t, char id, char *msg, char *msg2, int i, struct Process *ready, int n) {
-    print_time(t);
+    printf("time %ims: ", t);
     if (id != ' ') printf("Process %c ", id); // Assume a process can't have an id of ' '
     printf("%s ", msg);
     if (strcmp(msg2, "") != 0) printf("%i%s ", i, msg2);
@@ -48,7 +48,12 @@ void msg_event_q(int t, char id, char *msg, struct Process *ready, int n) {
     msg_event_q_i(t, id, msg, "", 0, ready, n);
 }
 
-void msg_io_preempt(int t, char id1, char id2, struct Process *ready, int n) {
-    printf("time %ims: Process %c completed I/O and will preempt %c ", t, id1, id2);
+void msg_added_ready(int t, char id, char* s, struct Process *ready, int n) {
+    printf("time %ims: Process %c %s added to ready queue ", t, id, s);
+    msg_queue(ready, n);
+}
+
+void msg_preempt(int t, char id1, char id2, char* s, struct Process *ready, int n) {
+    printf("time %ims: Process %c %s and will preempt %c ", t, id1, s, id2);
     msg_queue(ready, n);
 }

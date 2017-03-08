@@ -100,7 +100,7 @@ int main(int argc, char * argv[]) {
     struct Process *blocked = (struct Process*) calloc(n, sizeof(struct Process));
     int blocked_n = 0;
     bool increment;
-    msg_event_q(t, ' ', "Simulator started for FCFS", ready, ready_n);
+    msg_sim_start(t, "FCFS", ready, ready_n);
     
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
@@ -109,7 +109,7 @@ int main(int argc, char * argv[]) {
             if (waiting[i].arrive <= t) {
                 ready_n++;
                 ready[ready_n - 1] = waiting[i];
-                msg_event_q(t, ready[ready_n - 1].id, "arrived and added to ready queue", ready, ready_n);
+                msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 increment = false;
@@ -120,7 +120,7 @@ int main(int argc, char * argv[]) {
             if (blocked[i].arrive <= t) {
                 ready_n++;
                 ready[ready_n - 1] = blocked[i];
-                msg_event_q(t, ready[ready_n - 1].id, "completed I/O; added to ready queue", ready, ready_n);
+                msg_added_ready(t, ready[ready_n - 1].id, "completed I/O;", ready, ready_n);
                 blocked_n--;
                 for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                 increment = false;
@@ -161,7 +161,7 @@ int main(int argc, char * argv[]) {
             }
         }
     }
-    msg_event(t, "Simulator ended for FCFS");
+    msg_sim_end(t, "FCFS");
 
     // Shortest Remaining Time (SRT)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
@@ -169,26 +169,27 @@ int main(int argc, char * argv[]) {
         waiting[i] = array[i];
         waiting[i].burst_left = waiting[i].burst_time;
     }
-    msg_event_q(t, ' ', "Simulator started for SRT", ready, ready_n);
+    msg_sim_start(t, "SRT", ready, ready_n);
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
         // Check for new arrivals
         for (i = 0; i < waiting_n; ++i) {
             if (waiting[i].arrive <= t) {
-                ready_n++;
-                ready[ready_n - 1] = waiting[i];
                 // Preemptive
                 if (running_active && ready[ready_n - 1].burst_left < running.burst_left) {
-                    char s[2] = "\0";
-                    s[0] = running.id;
-                    msg_event_q_i(t, ready[ready_n - 1].id, "arrived and will preempt", s, 0, ready, ready_n);
+                    msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
-                    running_active = false;
-                    t += t_cs/2;
+                    t += t_cs;
+                    running = waiting[i];
+                    msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
                 }
                 // Non-preemptive
-                else msg_event_q(t, ready[ready_n - 1].id, "arrived and added to ready queue", ready, ready_n);
+                else {
+                    ready_n++;
+                    ready[ready_n - 1] = waiting[i];
+                    msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
+                }
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 increment = false;
@@ -197,7 +198,7 @@ int main(int argc, char * argv[]) {
         for (i = 0; i < blocked_n; ++i) {
             if (blocked[i].arrive <= t) {
                 if (blocked[i].burst_time < running.burst_left) {
-                    msg_io_preempt(t, blocked[i].id, running.id, ready, ready_n);
+                    msg_preempt(t, blocked[i].id, running.id, "completed I/O", ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
                     running = blocked[i];
@@ -253,6 +254,7 @@ int main(int argc, char * argv[]) {
                         running.arrive = t + running.io;
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
+                        t--;
                     }
                     // Terminate if finished
                     else {
@@ -265,7 +267,8 @@ int main(int argc, char * argv[]) {
             t++;
         }
     }
-    msg_event(t, "Simulator ended for SRT");
+    t--;
+    msg_sim_end(t, "SRT");
 
     // Round Robin (RR)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
@@ -273,9 +276,9 @@ int main(int argc, char * argv[]) {
         waiting[i] = array[i];
         waiting[i].burst_left = 0;
     }
-    msg_event_q(t, ' ', "Simulator started for RR", ready, ready_n);
+    msg_sim_start(t, "RR", ready, ready_n);
     // TBA: RR
-    msg_event(t, "Simulator ended for RR");
+    msg_sim_end(t, "RR");
     
     // TBA: output file stuff, don't forget to check if file can be opened (same process/error as w/ source file)
     // Problem: can't just free(array), dunno how to deallocate it
