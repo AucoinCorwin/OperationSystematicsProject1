@@ -274,10 +274,93 @@ int main(int argc, char * argv[]) {
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
     for (i = 0; i < n; i++) {
         waiting[i] = array[i];
-        waiting[i].burst_left = 0;
+        waiting[i].burst_left = waiting[i].burst_time;
     }
     msg_sim_start(t, "RR", ready, ready_n);
-    // TBA: RR
+     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
+        increment = true;
+        // Check for new arrivals
+        for (i = 0; i < waiting_n; ++i) {
+            if (waiting[i].arrive <= t) {
+                ready_n++;
+                ready[ready_n - 1] = waiting[i];
+                msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
+                waiting_n--;
+                for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
+                increment = false;
+            }
+        }
+        // Check for finished I/O
+        for (i = 0; i < blocked_n; ++i) {
+            if (blocked[i].arrive <= t) {
+                blocked[i].burst_left = blocked[i].burst_time;
+                ready_n++;
+                ready[ready_n - 1] = blocked[i];
+                msg_added_ready(t, ready[ready_n - 1].id, "completed I/O;", ready, ready_n);
+                blocked_n--;
+                for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
+                increment = false;
+            }
+        }
+        // Set running, if possible/none already
+        if (increment && !running_active && ready_n > 0) {   //
+            running = ready[0];
+            running_active = true;
+            ready_n--;
+            for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
+            t += t_cs/2;
+            msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            running.arrive = t + t_slice;
+            increment = false;
+
+        }
+        // Update time if nothing else has been done this tick
+        if (increment) {
+            t++;
+            running.burst_left--;
+            // Update running, if possible
+            
+            if (running_active && running.burst_left <= 0) {
+                running.burst_num--;
+                running_active = false;
+                // Add to blocked, if possible
+                if (running.burst_num > 0) {
+                    
+                    msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
+                    
+                    msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) + running.io), ready, ready_n);
+                    t += t_cs/2;
+                    running.arrive = t + running.io;
+                    blocked_n++;
+                    blocked[blocked_n - 1] = running;
+                }
+                // Terminate if finished
+                else {
+                    msg_event_q(t, running.id, "terminated", ready, ready_n);
+                    t += t_cs/2;
+                }
+            }
+            else if (running_active && running.arrive <= t){
+                //Then the time slice is up, and it needs to be added to the back of the ready queue
+                if(ready_n > 0){
+                    
+                    ready_n++;
+                    ready[ready_n - 1] = running;
+                    running_active = false;
+                    printf("time %d moving running back to ready.\n", t);
+                    t += t_cs/2;
+                     //TBA: There should be a message here
+                }
+                else{
+                    running.arrive += t + t_slice;
+                    printf("time %d nothing in ready, reset the time slice\n", t);
+                }
+                //TBA: There should be a message here
+                
+                
+            }
+        }
+    }
     msg_sim_end(t, "RR");
     
     // TBA: output file stuff, don't forget to check if file can be opened (same process/error as w/ source file)
