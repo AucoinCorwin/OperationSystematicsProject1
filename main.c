@@ -342,22 +342,17 @@ int main(int argc, char * argv[]) {
             }
             else if (running_active && running.arrive <= t){
                 //Then the time slice is up, and it needs to be added to the back of the ready queue
-                if(ready_n > 0){
-                    
+                if(ready_n > 0) {
+                    msg_slice_preempt(t, running.id, running.burst_left, ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
                     running_active = false;
-                    printf("time %d moving running back to ready.\n", t);
                     t += t_cs/2;
-                     //TBA: There should be a message here
                 }
-                else{
+                else {
                     running.arrive += t + t_slice;
-                    printf("time %d nothing in ready, reset the time slice\n", t);
+                    msg_event_q(t, ' ', "Time slice expired; no preemption because ready queue is empty", ready, ready_n);
                 }
-                //TBA: There should be a message here
-                
-                
             }
         }
     }

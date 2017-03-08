@@ -57,3 +57,8 @@ void msg_preempt(int t, char id1, char id2, char* s, struct Process *ready, int 
     printf("time %ims: Process %c %s and will preempt %c ", t, id1, s, id2);
     msg_queue(ready, n);
 }
+
+void msg_slice_preempt(int t, char id, int remaining, struct Process *ready, int n) {
+    printf("time %ims: Time slice expired; process %c preempted with %ims to go ", t, id, remaining);
+    msg_queue(ready, n);
+}
