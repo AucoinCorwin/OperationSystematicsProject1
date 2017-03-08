@@ -196,14 +196,13 @@ int main(int argc, char * argv[]) {
         }
         for (i = 0; i < blocked_n; ++i) {
             if (blocked[i].arrive <= t) {
-                if(blocked[i].burst_time < running.burst_left){
+                if (blocked[i].burst_time < running.burst_left) {
+                    msg_io_preempt(t, blocked[i].id, running.id, ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
                     running = blocked[i];
-                   
                     running.burst_left = running.burst_time;
-                    //TBA: Darien has the message thing that should happen here (completed I/O and will preempt X)
-                    printf("Placeholder, something completed I/O and preempted something\n");
+                    
                     t += t_cs;
                     msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
                     blocked_n--;
@@ -245,11 +244,10 @@ int main(int argc, char * argv[]) {
                     running.burst_left = 0;
                     running.burst_num--;
                     running_active = false;
+                    
                     // Add to blocked, if possible
                     if (running.burst_num > 0) {
-                        
                         msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
-                        
                         msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) +  running.io), ready, ready_n);
                         t += t_cs/2;
                         running.arrive = t + running.io;
