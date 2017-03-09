@@ -108,7 +108,6 @@ int main(int argc, char *argv[]) {
     int switches = 0;
     int preempts = 0;
     msg_sim_start(t, "FCFS", ready, ready_n);
-    out_start(output, "FCFS");
     t--;
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
@@ -180,7 +179,7 @@ int main(int argc, char *argv[]) {
         }
     }
     msg_sim_end(t, "FCFS");
-    out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
+    out_params(argv[1], "FCFS", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
     
     // Shortest Remaining Time (SRT)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
@@ -189,7 +188,6 @@ int main(int argc, char *argv[]) {
     switches = 0;
     for (i = 0; i < n; i++) waiting[i] = array[i];
     msg_sim_start(t, "SRT", ready, ready_n);
-    out_start(output, "SRT");
     t--;
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
@@ -212,9 +210,7 @@ int main(int argc, char *argv[]) {
         }
         
         // Update time if nothing else has been done this tick
-        
         if (increment) {
-            
             // Update running, if possible
             if (running_active) {
                 if (running.burst_left <= 0) {
@@ -317,7 +313,7 @@ int main(int argc, char *argv[]) {
     }
     t--;
     msg_sim_end(t, "SRT");
-    out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
+    out_params(argv[1], "SRT", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
 
     // Round Robin (RR)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
@@ -327,7 +323,6 @@ int main(int argc, char *argv[]) {
     preempts = 0;
     for (i = 0; i < n; i++) waiting[i] = array[i];
     msg_sim_start(t, "RR", ready, ready_n);
-    out_start(output, "RR");
     t--;
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
@@ -424,7 +419,7 @@ int main(int argc, char *argv[]) {
     
     }
     msg_sim_end(t, "RR");
-    out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
+    out_params(argv[1],"RR", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
     
     // Problem: can't just free(array), dunno how to deallocate it
     fclose(output);

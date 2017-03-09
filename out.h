@@ -13,11 +13,10 @@ void debug_int(int i, int v, FILE *output) {
     if (i != v) fprintf(output, "** ERROR: correct value %i\n", i);
 }
 
-void out_params(char* algo, FILE *output, float burst, int wait_total, int wait_count, int turnaround_total, int turnaround_count, int switches, int preempts) {
+void out_params(char* algo, char* input, FILE *output, float burst, int wait_total, int wait_count, int turnaround_total, int turnaround_count, int switches, int preempts) {
     fprintf(output, "Algorithm %s\n", algo);
     fprintf(output, "-- average CPU burst time: %.2f ms\n", burst);
     #ifdef DEBUG
-        int input = 1;
         float f = 403.85;
         debug_float(f, burst, output);
     #endif
