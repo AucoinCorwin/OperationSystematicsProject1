@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
                         t += t_cs/2;
                         wait_total += (t_cs/2) * ready_n;
                         running.arrive = t + running.io;
-                        msg_event_q_i(t - (t_cs/2), running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) +  running.io), ready, ready_n);
+                        msg_event_q_i(t - (t_cs/2), running.id, "switching out of CPU; will block on I/O until time", "ms", (t + running.io), ready, ready_n);
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
                         t--;
@@ -368,7 +368,7 @@ int main(int argc, char *argv[]) {
                     t += t_cs/2;
                     wait_total += (t_cs/2) * ready_n;
                     running.arrive = t + running.io;
-                    msg_event_q_i(t - (t_cs/2), running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) + running.io), ready, ready_n);
+                    msg_event_q_i(t - (t_cs/2), running.id, "switching out of CPU; will block on I/O until time", "ms", (t + running.io), ready, ready_n);
                     blocked_n++;
                     blocked[blocked_n - 1] = running;
                 }
