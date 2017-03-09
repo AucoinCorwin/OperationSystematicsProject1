@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
             ready_n--;
             for (i = j; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
-            wait_total += (t_cs / 2) * ready_n;
+            wait_total += (t_cs / 2) * (ready_n);
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
@@ -232,6 +232,7 @@ int main(int argc, char *argv[]) {
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
                         t--;
+                        wait_total -= ready_n;
                     }
                     // Terminate if finished
                     else {
@@ -315,7 +316,6 @@ int main(int argc, char *argv[]) {
         
     }
     t--;
-    //wait_total += (preempts * (t_cs / 2));
     msg_sim_end(t, "SRT");
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
 
