@@ -142,9 +142,7 @@ int main(int argc, char *argv[]) {
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
-            int wait_time = t - running.arrive_wait - t_cs/2;
-            wait_total += wait_time;
-            fprintf(output, "Process %c waited for %ims; arrived %i, processed %i\n", running.id, wait_time, running.arrive_wait, t - t_cs/2);
+            wait_total += t - running.arrive_wait - t_cs/2;;
             wait_count++;
             increment = false;
         }
