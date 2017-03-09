@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdbool.h>
 #include "msg.h"
 #include "out.h"
 
@@ -25,14 +24,14 @@ void sort(struct Process *array, int arr_size) {
     struct Process temp;
     for (i = 1; i < arr_size; i++) {
         j = i;
-        while(j > 0 && array[j - 1].burst_left > array[j].burst_left) {
+        while (j > 0 && array[j - 1].burst_left > array[j].burst_left) {
             temp = array[j - 1];
             array[j - 1] = array[j];
             array[j] = temp;
             j--;
         }
     }
-    //Need to make this whole thing pass-by-reference
+    // TBA: Need to make this whole thing pass-by-reference
 }
 
 int main(int argc, char *argv[]) {

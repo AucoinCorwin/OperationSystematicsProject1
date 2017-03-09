@@ -56,7 +56,7 @@ void out_params(char *input, char *algo, FILE *output, float burst, int wait_tot
         if (c == '1') branch_float(&f, algo, 766.31, 551.85, 700.8);
         else if (c == '2') f = 106.00;
         else if (c == '3') branch_float(&f, algo, 2341.60, 1642.40, 2585.87);
-        else if (c == '4') branch_float(&f, algo,  436.17, 304.17, 619.17);
+        else if (c == '4') branch_float(&f, algo, 436.17, 304.17, 619.17);
         else if (c == '5') branch_float(&f, algo, 1950.80, 1220.07, 1798.80);
         else if (c == '6') branch_float(&f, algo, 64.25, 67.92, 64.25);
         debug_float(f, turnaround, output);
