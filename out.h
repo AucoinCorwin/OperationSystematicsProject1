@@ -5,8 +5,10 @@ float avg(int total, int count) {
     else return ((float)total / (float)count);
 }
 
-void debug_float(float f, float v, FILE *output) {
-    if (v - f > 0.01 || f - v > 0.01) fprintf(output, "** ERROR: correct value %.2f\n", f);
+void debug_float(float f, float v, FILE *output, char *algo, bool times) {
+    float range = 0.01;
+    if (times && algo != "FCFS") range = 2.0;
+    if (v - f > range || f - v > range) fprintf(output, "** ERROR: correct value %.2f\n", f);
 }
 
 void debug_int(int i, int v, FILE *output) {
@@ -37,7 +39,7 @@ void out_params(char *input, char *algo, FILE *output, float burst, int wait_tot
         else if (c == '4') f = 102.50;
         else if (c == '5') f = 706.67;
         else if (c == '6') f = 47.83;
-        debug_float(f, burst, output);
+        debug_float(f, burst, output, algo, false);
     #endif
     float wait = avg(wait_total, wait_count);
     fprintf(output, "-- average wait time: %.2f ms\n", wait);
@@ -48,7 +50,7 @@ void out_params(char *input, char *algo, FILE *output, float burst, int wait_tot
         else if (c == '4') branch_float(&f, algo, 327.67, 195.67, 507.67);
         else if (c == '5') branch_float(&f, algo, 1238.13, 505.60, 1067.33);
         else if (c == '6') branch_float(&f, algo, 10.42, 13.58, 10.42);
-        debug_float(f, wait, output);
+        debug_float(f, wait, output, algo, true);
     #endif
     float turnaround = avg(turnaround_total, turnaround_count);
     fprintf(output, "-- average turnaround time: %.2f ms\n", turnaround);
@@ -59,7 +61,7 @@ void out_params(char *input, char *algo, FILE *output, float burst, int wait_tot
         else if (c == '4') branch_float(&f, algo, 436.17, 304.17, 619.17);
         else if (c == '5') branch_float(&f, algo, 1950.80, 1220.07, 1798.80);
         else if (c == '6') branch_float(&f, algo, 64.25, 67.92, 64.25);
-        debug_float(f, turnaround, output);
+        debug_float(f, turnaround, output, algo, true);
     #endif
     fprintf(output, "-- total number of context switches: %i\n", switches);
     #ifdef DEBUG
