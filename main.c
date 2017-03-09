@@ -191,6 +191,7 @@ int main(int argc, char *argv[]) {
     msg_sim_start(t, "SRT", ready, ready_n);
     out_start(output, "SRT");
     t--;
+    wait_total--;
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
         // Set running, if possible/none already
@@ -320,6 +321,8 @@ int main(int argc, char *argv[]) {
         
     }
     t--;
+    wait_total--;
+    wait_total += (preempts * (t_cs / 2));
     msg_sim_end(t, "SRT");
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
 
@@ -346,7 +349,6 @@ int main(int argc, char *argv[]) {
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + t_slice;
-            running.arrive = t + running.burst_time;
             //wait_total += t - running.arrive_wait - t_cs/2;
             //wait_total += ready_n * (t_cs/2);
             wait_count++;
