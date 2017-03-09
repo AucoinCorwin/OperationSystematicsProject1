@@ -7,7 +7,6 @@ struct Process {
     int burst_num;
     int burst_left;
     int io;
-    int arrive_wait;
 };
 
 int next(int *j, char *array_raw) {
