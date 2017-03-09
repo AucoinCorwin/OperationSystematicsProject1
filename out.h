@@ -1,3 +1,5 @@
+// Darien Keyack (661190088) and Corwin Aucoin (661178786)
+
 void out_start(FILE *output, char *algo) {
     fprintf(output, "Algorithm %s\n", algo);
 }

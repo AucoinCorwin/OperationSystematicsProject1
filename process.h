@@ -1,3 +1,5 @@
+// Darien Keyack (661190088) and Corwin Aucoin (661178786)
+
 struct Process {
     char id;
     int arrive;

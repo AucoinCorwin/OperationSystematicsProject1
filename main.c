@@ -6,6 +6,8 @@
 #include "msg.h"
 #include "out.h"
 
+// Darien Keyack (661190088) and Corwin Aucoin (661178786)
+
 void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n, int *turnaround_total, int *turnaround_count) {
     msg_space();
     *t = 0;
