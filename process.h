@@ -1,5 +1,3 @@
-// Darien Keyack (661190088) and Corwin Aucoin (661178786)
-
 struct Process {
     char id;
     int arrive;
@@ -7,6 +5,7 @@ struct Process {
     int burst_num;
     int burst_left;
     int io;
+    int arrive_wait;
 };
 
 int next(int *j, char *array_raw) {

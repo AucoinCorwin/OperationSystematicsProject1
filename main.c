@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     
     // Simulation Configuration
     int n = 0; // number of processes to simulate; will be determined via input file
-    int m = 1; // number of processors (i.e. cores) available w/in the CPU
+    //int m = 1; // number of processors (i.e. cores) available w/in the CPU
     int t_cs = 6; // time (in ms) it takes to perform a context switch
     int t_slice = 94; // time slice (in ms) for RR
     
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
                     t += t_cs/2;
                     wait_total += (t_cs / 2) * ready_n;
                     running.arrive = t + running.io;
-                    msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", running.arrive, ready, ready_n);
+                    msg_event_q_i(t - t_cs/2, running.id, "switching out of CPU; will block on I/O until time", "ms", running.arrive, ready, ready_n);
                     blocked_n++;
                     blocked[blocked_n - 1] = running;
                 }
@@ -225,10 +225,10 @@ int main(int argc, char *argv[]) {
                     // Add to blocked, if possible
                     if (running.burst_num > 0) {
                         msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
-                        msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) +  running.io), ready, ready_n);
                         t += t_cs/2;
                         wait_total += (t_cs/2) * ready_n;
                         running.arrive = t + running.io;
+                        msg_event_q_i(t - (t_cs/2), running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) +  running.io), ready, ready_n);
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
                         t--;
@@ -361,10 +361,11 @@ int main(int argc, char *argv[]) {
                 // Add to blocked, if possible
                 if (running.burst_num > 0) {
                     msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
-                    msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) + running.io), ready, ready_n);
+                    
                     t += t_cs/2;
                     wait_total += (t_cs/2) * ready_n;
                     running.arrive = t + running.io;
+                    msg_event_q_i(t - (t_cs/2), running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) + running.io), ready, ready_n);
                     blocked_n++;
                     blocked[blocked_n - 1] = running;
                 }
