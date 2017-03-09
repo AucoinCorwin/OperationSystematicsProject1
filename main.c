@@ -6,21 +6,15 @@
 #include "msg.h"
 #include "out.h"
 
-void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n,   
-  int *wait_total, int *wait_count, int *turnaround_total, int *turnaround_count, int *switches, int *preempts) {
+void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n, int *turnaround_total, int *turnaround_count) {
     msg_space();
     *t = 0;
     *ready_n = 0;
     *waiting_n = n;
-    int i;
     running_active = false;
     blocked_n = 0;
-    wait_total = 0;
-    wait_count = 0;
     turnaround_total = 0;
     turnaround_count = 0;
-    switches = 0;
-    preempts = 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -79,6 +73,10 @@ int main(int argc, char *argv[]) {
         free(array_raw[i]);
     }
     free(array_raw);
+    for (i = 0; i < n; i++) {
+        array[i].burst_left = array[i].burst_time;
+        array[i].arrive_wait = array[i].arrive;
+    }
     
     // Calculate average CPU burst time
     int burst_total = 0;
@@ -135,7 +133,7 @@ int main(int argc, char *argv[]) {
             }
         }
         // Set running, if possible/none already
-        if (increment && !running_active && ready_n > 0) {   //
+        if (increment && !running_active && ready_n > 0) { 
             running = ready[0];
             running_active = true;
             ready_n--;
@@ -144,6 +142,10 @@ int main(int argc, char *argv[]) {
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
+            int wait_time = t - running.arrive_wait - t_cs/2;
+            wait_total += wait_time;
+            fprintf(output, "Process %c waited for %ims; arrived %i, processed %i\n", running.id, wait_time, running.arrive_wait, t - t_cs/2);
+            wait_count++;
             increment = false;
         }
         // Update time if nothing else has been done this tick
@@ -169,38 +171,40 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
+        // Check for finished I/O
         for (i = 0; i < blocked_n; ++i) {
             if (blocked[i].arrive <= t) {
                 ready_n++;
                 ready[ready_n - 1] = blocked[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "completed I/O;", ready, ready_n);
+                ready[ready_n - 1].arrive_wait = t;
                 blocked_n--;
                 for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                 increment = false;
             }
         }
+        // Check for new arrivals
         for (i = 0; i < waiting_n; ++i) {
             if (waiting[i].arrive <= t) {
                 ready_n++;
                 ready[ready_n - 1] = waiting[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
+                ready[ready_n - 1].arrive_wait = t;
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 increment = false;
             }
         }
-        // Check for finished I/O
-        
     }
     msg_sim_end(t, "FCFS");
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
-
+    exit(EXIT_SUCCESS);
     // Shortest Remaining Time (SRT)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &wait_total, &wait_count, &turnaround_total, &turnaround_count, &switches, &preempts);
-    for (i = 0; i < n; i++) {
-        waiting[i] = array[i];
-        waiting[i].burst_left = waiting[i].burst_time;
-    }
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
+    wait_total = 0;
+    wait_count = 0;
+    switches = 0;
+    for (i = 0; i < n; i++) waiting[i] = array[i];
     msg_sim_start(t, "SRT", ready, ready_n);
     out_start(output, "SRT");
     
@@ -365,11 +369,12 @@ int main(int argc, char *argv[]) {
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
 
     // Round Robin (RR)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &wait_total, &wait_count, &turnaround_total, &turnaround_count, &switches, &preempts);
-    for (i = 0; i < n; i++) {
-        waiting[i] = array[i];
-        waiting[i].burst_left = waiting[i].burst_time;
-    }
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
+    wait_total = 0;
+    wait_count = 0;
+    switches = 0;
+    preempts = 0;
+    for (i = 0; i < n; i++) waiting[i] = array[i];
     msg_sim_start(t, "RR", ready, ready_n);
     out_start(output, "RR");
     t--;
