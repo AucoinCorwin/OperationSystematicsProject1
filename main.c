@@ -19,6 +19,26 @@ void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting
     turnaround_count = 0;
 }
 
+void sort(struct Process *array, int arr_size)
+{
+    int i;
+    int j;
+    struct Process temp;
+    for(i = 1; i < arr_size; i++)
+    {
+        j = i;
+        while( j > 0 && array[ j - 1].burst_left > array[j].burst_left)
+        {
+            temp = array[j - 1];
+            array[j - 1] = array[j];
+            array[j] = temp;
+            j--;
+        }
+        
+    }
+    //Need to make this whole thing pass-by-reference
+}
+
 int main(int argc, char *argv[]) {
     // Open input file
     FILE *input = fopen(argv[1], "r");
@@ -206,7 +226,11 @@ int main(int argc, char *argv[]) {
             for (i = j; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             wait_total += (t_cs / 2) * (ready_n);
-            msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            if(running.burst_left < running.burst_time)
+                printf("time %dms: Process %c started using the CPU with %ds remaining\n", t, running.id, running.burst_left); //TBA: This needs to append the array at the end
+                //msg_event_q(t, running.id, "started using the CPU with %dms remaining", ready, ready_n);
+            else
+                msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
             
@@ -273,6 +297,7 @@ int main(int argc, char *argv[]) {
                     blocked_n--;
                     for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
+                    sort(ready, ready_n);
                 }
                 // Non-preemptive
                 else {
@@ -284,6 +309,7 @@ int main(int argc, char *argv[]) {
                     blocked_n--;
                     for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
+                    sort(ready, ready_n);
                 }
                 
             }
@@ -297,7 +323,7 @@ int main(int argc, char *argv[]) {
                     ready_n++;
                     ready[ready_n - 1] = running;
                     ready[ready_n - 1].arrive_wait = t;
-                    
+                    sort(ready, ready_n);
                     t += t_cs;
                     wait_total += (t_cs) * ready_n;
                     running = waiting[i];
@@ -310,8 +336,10 @@ int main(int argc, char *argv[]) {
                 else {
                     ready_n++;
                     ready[ready_n - 1] = waiting[i];
+                    
                     msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                     ready[ready_n - 1].arrive_wait = t;
+                    sort(ready, ready_n);
                 }
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
@@ -344,6 +372,7 @@ int main(int argc, char *argv[]) {
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             wait_total += (t_cs/2) * ready_n;
+            
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + t_slice;
