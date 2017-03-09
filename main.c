@@ -107,31 +107,9 @@ int main(int argc, char *argv[]) {
     int preempts = 0;
     msg_sim_start(t, "FCFS", ready, ready_n);
     out_start(output, "FCFS");
-    
+    t--;
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
-        // Check for new arrivals
-        for (i = 0; i < waiting_n; ++i) {
-            if (waiting[i].arrive <= t) {
-                ready_n++;
-                ready[ready_n - 1] = waiting[i];
-                msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
-                waiting_n--;
-                for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
-                increment = false;
-            }
-        }
-        // Check for finished I/O
-        for (i = 0; i < blocked_n; ++i) {
-            if (blocked[i].arrive <= t) {
-                ready_n++;
-                ready[ready_n - 1] = blocked[i];
-                msg_added_ready(t, ready[ready_n - 1].id, "completed I/O;", ready, ready_n);
-                blocked_n--;
-                for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
-                increment = false;
-            }
-        }
         // Set running, if possible/none already
         if (increment && !running_active && ready_n > 0) { 
             running = ready[0];
@@ -140,6 +118,7 @@ int main(int argc, char *argv[]) {
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            
             switches++;
             running.arrive = t + running.burst_time;
             wait_total += t - running.arrive_wait - t_cs/2;;
@@ -190,6 +169,7 @@ int main(int argc, char *argv[]) {
                 ready[ready_n - 1].arrive_wait = t;
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
+                i--;
                 increment = false;
             }
         }
@@ -204,7 +184,7 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < n; i++) waiting[i] = array[i];
     msg_sim_start(t, "SRT", ready, ready_n);
     out_start(output, "SRT");
-    
+    t--;
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
         // Set running, if possible/none already
@@ -302,6 +282,7 @@ int main(int argc, char *argv[]) {
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 increment = false;
+                i--;
             }
         }
         
@@ -394,6 +375,7 @@ int main(int argc, char *argv[]) {
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 increment = false;
+                i--;
             }
         }
     
