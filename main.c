@@ -19,22 +19,18 @@ void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting
     turnaround_count = 0;
 }
 
-void sort(struct Process *array, int arr_size)
-{
+void sort(struct Process *array, int arr_size) {
     int i;
     int j;
     struct Process temp;
-    for(i = 1; i < arr_size; i++)
-    {
+    for (i = 1; i < arr_size; i++) {
         j = i;
-        while( j > 0 && array[ j - 1].burst_left > array[j].burst_left)
-        {
+        while(j > 0 && array[j - 1].burst_left > array[j].burst_left) {
             temp = array[j - 1];
             array[j - 1] = array[j];
             array[j] = temp;
             j--;
         }
-        
     }
     //Need to make this whole thing pass-by-reference
 }
@@ -59,7 +55,7 @@ int main(int argc, char *argv[]) {
     int size_array = 3;
     char **array_raw = (char**) calloc(size_array, sizeof(char*));
     while (fgets(line, sizeof(line), input) != NULL) {
-        if (line[0] != '#') {
+        if (line[0] != '#' && line[0] != ' ' && line[0] != '\n') {
             if (n >= size_array) {
                 size_array = size_array * 2;
                 array_raw = realloc(array_raw, size_array * sizeof(char*));
