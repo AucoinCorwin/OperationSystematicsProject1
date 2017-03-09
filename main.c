@@ -372,8 +372,11 @@ int main(int argc, char *argv[]) {
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             wait_total += (t_cs/2) * ready_n;
-            
-            msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            if(running.burst_left < running.burst_time)
+                printf("time %dms: Process %c started using the CPU with %ds remaining\n", t, running.id, running.burst_left); //TBA: This needs to append the array at the end
+                //msg_event_q(t, running.id, "started using the CPU with %dms remaining", ready, ready_n);
+            else
+                msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + t_slice;
             //wait_total += t - running.arrive_wait - t_cs/2;
