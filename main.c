@@ -176,6 +176,7 @@ int main(int argc, char *argv[]) {
     }
     msg_sim_end(t, "FCFS");
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
+    
     // Shortest Remaining Time (SRT)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
     wait_total = 0;
@@ -197,7 +198,7 @@ int main(int argc, char *argv[]) {
             for (i = j; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
-            if (running.burst_left <= 0 || running.burst_left == running.burst_num) switches++;
+            switches++;
             running.arrive = t + running.burst_time;
             increment = false;
         }
@@ -245,6 +246,7 @@ int main(int argc, char *argv[]) {
                     blocked_n--;
                     for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
+                    switches++;
                     preempts++;
                 }
                 // Non-preemptive
@@ -271,6 +273,7 @@ int main(int argc, char *argv[]) {
                     t += t_cs;
                     running = waiting[i];
                     msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+                    switches++;
                     preempts++;
                 }
                 // Non-preemptive
@@ -311,7 +314,7 @@ int main(int argc, char *argv[]) {
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
-            if (running.burst_left <= 0 || running.burst_left == running.burst_num) switches++;
+            switches++;
             running.arrive = t + t_slice;
             increment = false;
 
