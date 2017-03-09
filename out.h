@@ -17,33 +17,50 @@ void out_params(char* input, char* algo, FILE *output, float burst, int wait_tot
     fprintf(output, "Algorithm %s\n", algo);
     fprintf(output, "-- average CPU burst time: %.2f ms\n", burst);
     #ifdef DEBUG
-        debug_float(403.85, burst, output);
+        char c = input[9];
+        float f = 403.85;   // c == 1
+        if (c == '2') f = 100.00;
+        debug_float(f, burst, output);
     #endif
     float wait = avg(wait_total, wait_count);
     fprintf(output, "-- average wait time: %.2f ms\n", wait);
     #ifdef DEBUG
-        if (algo == "FCFS") debug_float(356.46, wait, output);
-        else if (algo == "SRT") debug_float(140.38, wait, output);
-        else debug_float(284.92, wait, output);
+        f = 0.00;           // c == 2
+        if (c == '1') {
+            if (algo == "FCFS") f = 356.46;
+            else if (algo == "SRT") f = 140.38;
+            else f = 284.92;
+        }
+        debug_float(f, wait, output);
     #endif
     float turnaround = avg(turnaround_total, turnaround_count);
     fprintf(output, "-- average turnaround time: %.2f ms\n", turnaround);
     #ifdef DEBUG
-        if (algo == "FCFS") debug_float(766.31, turnaround, output);
-        else if (algo == "SRT") debug_float(551.85, turnaround, output);
-        else debug_float(700.08, turnaround, output);
+        f = 106.00;     // c == 2
+        if (c == '1') {
+            if (algo == "FCFS") f = 766.31;
+            else if (algo == "SRT") f = 551.85;
+            else f = 700.08;
+        }
+        debug_float(f, turnaround, output);
     #endif
     fprintf(output, "-- total number of context switches: %i\n", switches);
     #ifdef DEBUG
-        int i;
-        if (algo == "FCFS") debug_int(13, switches, output);
-        else if (algo == "SRT") debug_int(20, switches, output);
-        else debug_int(36, switches, output);
+        int i = 5;     // c == 2
+        if (c == '1') {
+            if (algo == "FCFS") i = 13;
+            else if (algo == "SRT") i = 20;
+            else i = 36;   
+        }
+        debug_int(i, switches, output);
     #endif
     fprintf(output, "-- total number of preemptions: %i\n", preempts);
     #ifdef DEBUG
-        if (algo == "FCFS") debug_int(0, preempts, output);
-        else if (algo == "SRT") debug_int(7, preempts, output);
-        else debug_int(23, preempts, output);
+        i = 0;          // c == 2, c == 1 && algo == FCFS
+        if (c == '1') {
+            if (algo == "SRT") i = 7;
+            else i = 23;
+        }
+        debug_int(i, preempts, output);
     #endif
 }
