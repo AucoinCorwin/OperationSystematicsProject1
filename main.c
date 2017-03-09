@@ -198,7 +198,6 @@ int main(int argc, char *argv[]) {
     }
     msg_sim_end(t, "FCFS");
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
-    exit(EXIT_SUCCESS);
     // Shortest Remaining Time (SRT)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
     wait_total = 0;
@@ -210,61 +209,6 @@ int main(int argc, char *argv[]) {
     
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
-        // Check for new arrivals
-        for (i = 0; i < waiting_n; ++i) {
-            if (waiting[i].arrive <= t) {
-                // Preemptive
-                if (running_active && ready[ready_n - 1].burst_left < running.burst_left) {
-                    msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
-                    ready_n++;
-                    ready[ready_n - 1] = running;
-                    
-                    t += t_cs;
-                    running = waiting[i];
-                    msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
-                    preempts++;
-                }
-                // Non-preemptive
-                else {
-                    ready_n++;
-                    ready[ready_n - 1] = waiting[i];
-                    msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
-                }
-                waiting_n--;
-                for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
-                increment = false;
-            }
-        }
-        for (i = 0; i < blocked_n; ++i) {
-            // Preemptive
-            if (blocked[i].arrive <= t) {
-                if (blocked[i].burst_time < running.burst_left) {
-                    msg_preempt(t, blocked[i].id, running.id, "completed I/O", ready, ready_n);
-                    ready_n++;
-                    ready[ready_n - 1] = running;
-                    running = blocked[i];
-                    running.burst_left = running.burst_time;
-                    
-                    t += t_cs;
-                    msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
-                    blocked_n--;
-                    for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
-                    increment = false;
-                    preempts++;
-                }
-                // Non-preemptive
-                else {
-                    ready_n++;
-                    ready[ready_n - 1] = blocked[i];
-                    ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
-                    msg_event_q(t, ready[ready_n - 1].id, "completed I/O; added to ready queue", ready, ready_n);
-                    blocked_n--;
-                    for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
-                    increment = false;
-                }
-                
-            }
-        }
         // Set running, if possible/none already
         if (increment && !running_active && ready_n > 0) {
             j = 0;
