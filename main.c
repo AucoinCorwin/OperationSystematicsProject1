@@ -137,7 +137,10 @@ int main(int argc, char *argv[]) {
                 running_active = false;
                 // Add to blocked, if possible
                 if (running.burst_num > 0) {
-                    msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
+                    if(running.burst_num == 1)
+                        msg_event_q_i(t, running.id, "completed a CPU burst;", " burst to go", running.burst_num, ready, ready_n);
+                    else
+                        msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
                     t += t_cs/2;
                     wait_total += (t_cs / 2) * ready_n;
                     running.arrive = t + running.io;
@@ -224,7 +227,10 @@ int main(int argc, char *argv[]) {
                     
                     // Add to blocked, if possible
                     if (running.burst_num > 0) {
-                        msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
+                        if(running.burst_num == 1)
+                             msg_event_q_i(t, running.id, "completed a CPU burst;", " burst to go", running.burst_num, ready, ready_n);
+                        else
+                            msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
                         t += t_cs/2;
                         wait_total += (t_cs/2) * ready_n;
                         running.arrive = t + running.io;
@@ -232,13 +238,13 @@ int main(int argc, char *argv[]) {
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
                         t--;
-                        wait_total -= ready_n;
                     }
                     // Terminate if finished
                     else {
                         msg_event_q(t, running.id, "terminated", ready, ready_n);
                         t += t_cs/2;
                         wait_total += (t_cs/2) * ready_n;
+                        t--;
                     }
                 }
                 else running.burst_left--;
@@ -315,7 +321,6 @@ int main(int argc, char *argv[]) {
         }
         
     }
-    t--;
     msg_sim_end(t, "SRT");
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
 
@@ -360,7 +365,10 @@ int main(int argc, char *argv[]) {
                 running_active = false;
                 // Add to blocked, if possible
                 if (running.burst_num > 0) {
-                    msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
+                    if(running.burst_num == 1)
+                        msg_event_q_i(t, running.id, "completed a CPU burst;", " burst to go", running.burst_num, ready, ready_n);
+                    else
+                        msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
                     
                     t += t_cs/2;
                     wait_total += (t_cs/2) * ready_n;
