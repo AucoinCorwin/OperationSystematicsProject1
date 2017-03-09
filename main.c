@@ -117,16 +117,18 @@ int main(int argc, char *argv[]) {
             ready_n--;
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
+            wait_total += ready_n * (t_cs / 2);
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
-            wait_total += t - running.arrive_wait - t_cs/2;
+            //wait_total += t - running.arrive_wait - t_cs/2;
             wait_count++;
             increment = false;
         }
         // Update time if nothing else has been done this tick
         if (increment) {
             t++;
+            wait_total += ready_n;
             // Update running, if possible
             if (running_active && running.arrive <= t) {
                 running.burst_num--;
@@ -135,6 +137,7 @@ int main(int argc, char *argv[]) {
                 if (running.burst_num > 0) {
                     msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
                     t += t_cs/2;
+                    wait_total += (t_cs / 2) * ready_n;
                     running.arrive = t + running.io;
                     msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", running.arrive, ready, ready_n);
                     blocked_n++;
@@ -144,6 +147,7 @@ int main(int argc, char *argv[]) {
                 else {
                     msg_event_q(t, running.id, "terminated", ready, ready_n);
                     t += t_cs/2;
+                    wait_total += (t_cs / 2) * ready_n;
                 }
             }
         }
@@ -196,15 +200,19 @@ int main(int argc, char *argv[]) {
             ready_n--;
             for (i = j; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
+            wait_total += (t_cs / 2) * ready_n;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
-            wait_total += t - running.arrive_wait - t_cs/2;
+            
             wait_count++;
             increment = false;
         }
+        
         // Update time if nothing else has been done this tick
+        
         if (increment) {
+            
             // Update running, if possible
             if (running_active) {
                 if (running.burst_left <= 0) {
@@ -217,20 +225,24 @@ int main(int argc, char *argv[]) {
                         msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
                         msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) +  running.io), ready, ready_n);
                         t += t_cs/2;
+                        wait_total += (t_cs/2) * ready_n;
                         running.arrive = t + running.io;
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
                         t--;
+                        wait_total -= ready_n;
                     }
                     // Terminate if finished
                     else {
                         msg_event_q(t, running.id, "terminated", ready, ready_n);
                         t += t_cs/2;
+                        wait_total += (t_cs/2) * ready_n;
                     }
                 }
                 else running.burst_left--;
             }
             t++;
+            wait_total += ready_n;
         }
         // Check for I/O completion
         for (i = 0; i < blocked_n; ++i) {
@@ -239,17 +251,18 @@ int main(int argc, char *argv[]) {
                 if (blocked[i].burst_time < running.burst_left) {
                     msg_preempt(t, blocked[i].id, running.id, "completed I/O", ready, ready_n);
                     ready_n++;
+                    wait_total++;
                     ready[ready_n - 1] = running;
                     ready[ready_n - 1].arrive_wait = t;
                     running = blocked[i];
                     running.burst_left = running.burst_time;
                     
                     t += t_cs;
+                    wait_total += (t_cs) * ready_n;
                     msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
                     switches++;
                     preempts++;
                     running.arrive = t + running.burst_time;
-                    wait_total += t - running.arrive_wait - t_cs/2;
                     blocked_n--;
                     for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
@@ -257,6 +270,7 @@ int main(int argc, char *argv[]) {
                 // Non-preemptive
                 else {
                     ready_n++;
+                    wait_total++;
                     ready[ready_n - 1] = blocked[i];
                     ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
                     msg_event_q(t, ready[ready_n - 1].id, "completed I/O; added to ready queue", ready, ready_n);
@@ -275,20 +289,22 @@ int main(int argc, char *argv[]) {
                 if (running_active && ready[ready_n - 1].burst_left < running.burst_left) {
                     msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
                     ready_n++;
+                    wait_total++;
                     ready[ready_n - 1] = running;
                     ready[ready_n - 1].arrive_wait = t;
                     
                     t += t_cs;
+                    wait_total += (t_cs) * ready_n;
                     running = waiting[i];
                     msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
                     switches++;
                     preempts++;
                     running.arrive = t + running.burst_time;
-                    wait_total += t - running.arrive_wait - t_cs/2;
                 }
                 // Non-preemptive
                 else {
                     ready_n++;
+                    wait_total++;
                     ready[ready_n - 1] = waiting[i];
                     msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                     ready[ready_n - 1].arrive_wait = t;
@@ -324,17 +340,22 @@ int main(int argc, char *argv[]) {
             ready_n--;
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
+            wait_total += (t_cs/2) * ready_n;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
             switches++;
             running.arrive = t + t_slice;
             running.arrive = t + running.burst_time;
-            wait_total += t - running.arrive_wait - t_cs/2;
+            //wait_total += t - running.arrive_wait - t_cs/2;
+            //wait_total += ready_n * (t_cs/2);
+            wait_count++;
             increment = false;
 
         }
+        
         // Update time if nothing else has been done this tick
         if (increment) {
             t++;
+            wait_total += ready_n;
             running.burst_left--;
             // Update running, if possible
             if (running_active && running.burst_left <= 0) {
@@ -345,14 +366,17 @@ int main(int argc, char *argv[]) {
                     msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
                     msg_event_q_i(t, running.id, "switching out of CPU; will block on I/O until time", "ms", (t + (t_cs/2) + running.io), ready, ready_n);
                     t += t_cs/2;
+                    wait_total += (t_cs/2) * ready_n;
                     running.arrive = t + running.io;
                     blocked_n++;
                     blocked[blocked_n - 1] = running;
                 }
+                
                 // Terminate if finished
                 else {
                     msg_event_q(t, running.id, "terminated", ready, ready_n);
                     t += t_cs/2;
+                    wait_total += (t_cs/2) * ready_n;
                 }
             }
             else if (running_active && running.arrive <= t) {
@@ -361,10 +385,12 @@ int main(int argc, char *argv[]) {
                     msg_slice_preempt(t, running.id, running.burst_left, ready, ready_n);
                     preempts++;
                     ready_n++;
+                    wait_total++;
                     ready[ready_n - 1] = running;
                     ready[ready_n - 1].arrive_wait = t;
                     running_active = false;
                     t += t_cs/2;
+                    wait_total += (t_cs/2) * ready_n;
                 }
                 else {
                     running.arrive = t + t_slice;
@@ -377,6 +403,7 @@ int main(int argc, char *argv[]) {
             if (blocked[i].arrive <= t) {
                 blocked[i].burst_left = blocked[i].burst_time;
                 ready_n++;
+                wait_total++;
                 ready[ready_n - 1] = blocked[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "completed I/O;", ready, ready_n);
                 ready[ready_n - 1].arrive_wait = t;
@@ -389,6 +416,7 @@ int main(int argc, char *argv[]) {
         for (i = 0; i < waiting_n; ++i) {
             if (waiting[i].arrive <= t) {
                 ready_n++;
+                wait_total++;
                 ready[ready_n - 1] = waiting[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                 ready[ready_n - 1].arrive_wait = t;
