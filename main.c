@@ -350,7 +350,7 @@ int main(int argc, char * argv[]) {
                     t += t_cs/2;
                 }
                 else {
-                    running.arrive += t + t_slice;
+                    running.arrive = t + t_slice;
                     msg_event_q(t, ' ', "Time slice expired; no preemption because ready queue is empty", ready, ready_n);
                 }
             }
