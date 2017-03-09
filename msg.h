@@ -62,3 +62,9 @@ void msg_slice_preempt(int t, char id, int remaining, struct Process *ready, int
     printf("time %ims: Time slice expired; process %c preempted with %ims to go ", t, id, remaining);
     msg_queue(ready, n);
 }
+
+void msg_cpu(int t, struct Process running, struct Process *ready, int n) {
+    printf("time %dms: Process %c started using the CPU ", t, running.id);
+    if (running.burst_left < running.burst_time) printf("with %ds remaining ", running.burst_left);
+    msg_queue(ready, n);
+}
