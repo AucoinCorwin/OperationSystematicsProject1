@@ -361,7 +361,7 @@ int main(int argc, char *argv[]) {
     }
     msg_sim_start(t, "RR", ready, ready_n);
     out_start(output, "RR");
-    
+    t--;
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
         // Check for new arrivals
@@ -440,7 +440,7 @@ int main(int argc, char *argv[]) {
                 increment = false;
             }
         }
-        
+    
     }
     msg_sim_end(t, "RR");
     out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
