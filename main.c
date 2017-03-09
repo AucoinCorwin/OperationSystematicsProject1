@@ -142,6 +142,7 @@ int main(int argc, char *argv[]) {
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            switches += 1;
             running.arrive = t + running.burst_time;
             increment = false;
         }
@@ -229,6 +230,7 @@ int main(int argc, char *argv[]) {
             }
         }
         for (i = 0; i < blocked_n; ++i) {
+            // Preemptive
             if (blocked[i].arrive <= t) {
                 if (blocked[i].burst_time < running.burst_left) {
                     msg_preempt(t, blocked[i].id, running.id, "completed I/O", ready, ready_n);
@@ -243,7 +245,8 @@ int main(int argc, char *argv[]) {
                     for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
                 }
-                else{
+                // Non-preemptive
+                else {
                     ready_n++;
                     ready[ready_n - 1] = blocked[i];
                     ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
@@ -265,7 +268,7 @@ int main(int argc, char *argv[]) {
             for (i = j; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
-            
+            if (running.burst_left <= 0 || running.burst_left == running.burst_num) switches += 1;
             running.arrive = t + running.burst_time;
             increment = false;
         }
@@ -299,6 +302,7 @@ int main(int argc, char *argv[]) {
             t++;
         }
         for (i = 0; i < blocked_n; ++i) {
+            // Preemptive
             if (blocked[i].arrive <= t) {
                 if (blocked[i].burst_time < running.burst_left) {
                     msg_preempt(t, blocked[i].id, running.id, "completed I/O", ready, ready_n);
@@ -313,7 +317,8 @@ int main(int argc, char *argv[]) {
                     for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
                 }
-                else{
+                // Non-preemptive
+                else {
                     ready_n++;
                     ready[ready_n - 1] = blocked[i];
                     ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
@@ -332,6 +337,7 @@ int main(int argc, char *argv[]) {
                     msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
+                    
                     t += t_cs;
                     running = waiting[i];
                     msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
@@ -374,6 +380,7 @@ int main(int argc, char *argv[]) {
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
             msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            if (running.burst_left <= 0 || running.burst_left == running.burst_num) switches += 1;
             running.arrive = t + t_slice;
             increment = false;
 
