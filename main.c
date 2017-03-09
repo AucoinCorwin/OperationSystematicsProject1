@@ -4,8 +4,10 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include "msg.h"
+#include "out.h"
 
-void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n) {
+void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n,   
+  int *wait_total, int *wait_count, int *turnaround_total, int *turnaround_count, int *switches, int *preempts) {
     msg_space();
     *t = 0;
     *ready_n = 0;
@@ -13,32 +15,22 @@ void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting
     int i;
     running_active = false;
     blocked_n = 0;
+    wait_total = 0;
+    wait_count = 0;
+    turnaround_total = 0;
+    turnaround_count = 0;
+    switches = 0;
+    preempts = 0;
 }
- /*void srt_add(struct Process *array, struct Process proc, int *arrsize){
-    int i;
-    struct Process temp;
-    arrsize++;
-    array[*arrsize - 1] = proc;
-    for(i = 0; i < *arrsize; i++){
-        int j;
-        while(j > 0 && array[j - 1].burst_time > array[j].burst_time){
-            temp = array[j];
-            array[j] = array[j - 1];
-            array[j - 1] = temp;
-            j -= 1;
-        }
-    }
-    // Just insertion sort by burst_time for srt, shortest burst_time should be at [0] after every call
-    // Right now the array comes in with the free space (add 1 to arrsize before passing it)
-    // Could probably change that to happen in the function so we have some wiggle room with error checking
-    // We should only need to do this when each process arrives for the first time and every time something comes back from block
-    // Also we need to check afterwords to see if it has a shorter time than the thing in the running thing, and if it does we need to preempt it
-    }*/
 
-int main(int argc, char * argv[]) {
-    // Open File
+int main(int argc, char *argv[]) {
+    // Open input file
     FILE *input = fopen(argv[1], "r");
     if (input == NULL) msg_error("Invalid input file format");
+    
+    // Open output file
+    FILE *output = fopen(argv[2], "w");
+    if (output == NULL) msg_error("Invalid output file format");
     
     // Simulation Configuration
     int n = 0; // number of processes to simulate; will be determined via input file
@@ -88,6 +80,15 @@ int main(int argc, char * argv[]) {
     }
     free(array_raw);
     
+    // Calculate average CPU burst time
+    int burst_total = 0;
+    int burst_count = 0;
+    for (i = 0; i < n; i++) {
+        burst_total += (array[i].burst_time * array[i].burst_num);
+        burst_count += array[i].burst_num;
+    }
+    float burst = avg(burst_total, burst_count);
+    
     // First Come First Serve (FCFS)
     int t = 0;
     struct Process *ready = (struct Process*) calloc(n, sizeof(struct Process));
@@ -100,7 +101,14 @@ int main(int argc, char * argv[]) {
     struct Process *blocked = (struct Process*) calloc(n, sizeof(struct Process));
     int blocked_n = 0;
     bool increment;
+    int wait_total = 0;
+    int wait_count = 0;
+    int turnaround_total = 0;
+    int turnaround_count = 0;
+    int switches = 0;
+    int preempts = 0;
     msg_sim_start(t, "FCFS", ready, ready_n);
+    out_start(output, "FCFS");
     
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
@@ -162,14 +170,17 @@ int main(int argc, char * argv[]) {
         }
     }
     msg_sim_end(t, "FCFS");
+    out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
 
     // Shortest Remaining Time (SRT)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &wait_total, &wait_count, &turnaround_total, &turnaround_count, &switches, &preempts);
     for (i = 0; i < n; i++) {
         waiting[i] = array[i];
         waiting[i].burst_left = waiting[i].burst_time;
     }
     msg_sim_start(t, "SRT", ready, ready_n);
+    out_start(output, "SRT");
+    
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
         // Check for new arrivals
@@ -238,7 +249,6 @@ int main(int argc, char * argv[]) {
         }
         // Update time if nothing else has been done this tick
         if (increment) {
-            
             // Update running, if possible
             if (running_active) {
                 if (running.burst_left <= 0) {
@@ -269,15 +279,18 @@ int main(int argc, char * argv[]) {
     }
     t--;
     msg_sim_end(t, "SRT");
+    out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
 
     // Round Robin (RR)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &wait_total, &wait_count, &turnaround_total, &turnaround_count, &switches, &preempts);
     for (i = 0; i < n; i++) {
         waiting[i] = array[i];
         waiting[i].burst_left = waiting[i].burst_time;
     }
     msg_sim_start(t, "RR", ready, ready_n);
-     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
+    out_start(output, "RR");
+    
+    while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
         // Check for new arrivals
         for (i = 0; i < waiting_n; ++i) {
@@ -357,8 +370,9 @@ int main(int argc, char * argv[]) {
         }
     }
     msg_sim_end(t, "RR");
+    out_params(output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
     
-    // TBA: output file stuff, don't forget to check if file can be opened (same process/error as w/ source file)
     // Problem: can't just free(array), dunno how to deallocate it
+    fclose(output);
     exit(EXIT_SUCCESS);
 }
