@@ -7,7 +7,7 @@
 
 // Darien Keyack (661190088) and Corwin Aucoin (661178786)
 
-void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n) {
+void reset(int *t, int *ready_n, int *waiting_n, int n, bool *running_active, int *blocked_n) {
     msg_space();
     *t = 0;
     *ready_n = 0;
@@ -29,7 +29,6 @@ void sort(struct Process *array, int arr_size) {
             j--;
         }
     }
-    // TBA: Need to make this whole thing pass-by-reference
 }
 
 int main(int argc, char *argv[]) {
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
     
     // Simulation Configuration
     int n = 0; // number of processes to simulate; will be determined via input file
-    //int m = 1; // number of processors (i.e. cores) available w/in the CPU
+    int m = 1; // number of processors (i.e. cores) available w/in the CPU
     int t_cs = 6; // time (in ms) it takes to perform a context switch
     int t_slice = 94; // time slice (in ms) for RR
     #ifdef DEBUG
@@ -95,6 +94,7 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < n; i++) {
         array[i].burst_left = array[i].burst_time;
         array[i].arrive_wait = array[i].arrive;
+        array[i].arrive_turn = array[i].arrive;
     }
     
     // Calculate average CPU burst time
@@ -162,6 +162,8 @@ int main(int argc, char *argv[]) {
                 }
                 // Terminate if finished
                 else msg_event_q(t, running.id, "terminated", ready, ready_n);
+                turnaround_count++;
+                turnaround_total += t + t_cs/2 - running.arrive_turn;
             }
         }
         // Check for finished I/O
@@ -171,6 +173,7 @@ int main(int argc, char *argv[]) {
                 ready[ready_n - 1] = blocked[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "completed I/O;", ready, ready_n);
                 ready[ready_n - 1].arrive_wait = t;
+                ready[ready_n - 1].arrive_turn = t;
                 blocked_n--;
                 for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                 increment = false;
@@ -183,6 +186,7 @@ int main(int argc, char *argv[]) {
                 ready[ready_n - 1] = waiting[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                 ready[ready_n - 1].arrive_wait = t;
+                ready[ready_n - 1].arrive_turn = t;
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 i--;
@@ -198,7 +202,7 @@ int main(int argc, char *argv[]) {
     #endif
     
     // Shortest Remaining Time (SRT)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
+    reset(&t, &ready_n, &waiting_n, n, &running_active, &blocked_n);
     wait_total = 0;
     wait_count = 0;
     turnaround_total = 0;
@@ -335,7 +339,7 @@ int main(int argc, char *argv[]) {
     #endif
 
     // Round Robin (RR)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
+    reset(&t, &ready_n, &waiting_n, n, &running_active, &blocked_n);
     wait_total = 0;
     wait_count = 0;
     turnaround_total = 0;
