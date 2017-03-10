@@ -301,7 +301,7 @@ int main(int argc, char *argv[]) {
         for (i = 0; i < waiting_n; ++i) {
             if (waiting[i].arrive <= t) {
                 // Preemptive
-                if (running_active && ready[ready_n - 1].burst_left < running.burst_left) {
+                if (running_active && waiting[i].burst_left < running.burst_left) {
                     msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
