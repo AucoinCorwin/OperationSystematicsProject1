@@ -403,6 +403,7 @@ int main(int argc, char *argv[]) {
                 else {
                     msg_event_q(t, running.id, "terminated", ready, ready_n);
                     t += t_cs/2;
+                    turnaround_total += t + t_cs/2 - running.arrive_turn;
                 }
             }
             else if (running_active && running.arrive <= t) {
@@ -413,6 +414,7 @@ int main(int argc, char *argv[]) {
                     ready_n++;
                     ready[ready_n - 1] = running;
                     ready[ready_n - 1].arrive_wait = t;
+                    ready[ready_n - 1].arrive_turn = t;
                     running_active = false;
                     t += t_cs/2;
                 }
@@ -430,6 +432,7 @@ int main(int argc, char *argv[]) {
                 ready[ready_n - 1] = blocked[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "completed I/O;", ready, ready_n);
                 ready[ready_n - 1].arrive_wait = t;
+                ready[ready_n - 1].arrive_turn = t;
                 blocked_n--;
                 for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                 increment = false;
@@ -442,6 +445,7 @@ int main(int argc, char *argv[]) {
                 ready[ready_n - 1] = waiting[i];
                 msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                 ready[ready_n - 1].arrive_wait = t;
+                ready[ready_n - 1].arrive_turn = t;
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 increment = false;
