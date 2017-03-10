@@ -7,15 +7,13 @@
 
 // Darien Keyack (661190088) and Corwin Aucoin (661178786)
 
-void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n, int *turnaround_total, int *turnaround_count) {
+void reset(int *t, int *ready_n, int *waiting_n, int n, struct Process **waiting, bool *running_active, int *blocked_n) {
     msg_space();
     *t = 0;
     *ready_n = 0;
     *waiting_n = n;
     running_active = false;
     blocked_n = 0;
-    turnaround_total = 0;
-    turnaround_count = 0;
 }
 
 void sort(struct Process *array, int arr_size) {
@@ -126,7 +124,6 @@ int main(int argc, char *argv[]) {
     int turnaround_total = 0;
     int turnaround_count = 0;
     int switches = 0;
-    int preempts = 0;
     msg_sim_start(t, "FCFS", ready, ready_n);
     t--;
     
@@ -195,18 +192,20 @@ int main(int argc, char *argv[]) {
         if (add_cs) t += t_cs/2;
     }
     msg_sim_end(t, "FCFS");
-    out_params(argv[1], "FCFS", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
+    out_params(argv[1], "FCFS", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, 0);
     #ifdef DEBUG
         if (limit == 'R') exit(EXIT_SUCCESS);
     #endif
     
     // Shortest Remaining Time (SRT)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
     wait_total = 0;
     wait_count = 0;
+    turnaround_total = 0;
+    turnaround_count = 0;
     switches = 0;
+    int preempts = 0;
     for (i = 0; i < n; i++) waiting[i] = array[i];
-    char id;
     msg_sim_start(t, "SRT", ready, ready_n);
     t--;
     
@@ -286,9 +285,8 @@ int main(int argc, char *argv[]) {
                     ready[ready_n - 1] = blocked[i];
                     ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
                     ready[ready_n - 1].arrive_wait = t;
-                    id = ready[ready_n - 1].id;
                     sort(ready, ready_n);
-                    msg_event_q(t, id, "completed I/O; added to ready queue", ready, ready_n);
+                    msg_event_q(t, blocked[i].id, "completed I/O; added to ready queue", ready, ready_n);
                     blocked_n--;
                     for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
@@ -337,9 +335,11 @@ int main(int argc, char *argv[]) {
     #endif
 
     // Round Robin (RR)
-    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
+    reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n);
     wait_total = 0;
     wait_count = 0;
+    turnaround_total = 0;
+    turnaround_count = 0;
     switches = 0;
     preempts = 0;
     for (i = 0; i < n; i++) waiting[i] = array[i];

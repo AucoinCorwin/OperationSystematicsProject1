@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     int i;
     int len;
     #ifdef DEBUG
-        char limit = 'F';
+        char limit = 'R';
         if (argc > 3) limit = toupper(argv[3][0]);
     #endif
     while (fgets(line_g, sizeof(line_g), gen) != NULL) {
