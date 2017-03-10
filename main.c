@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
                 turnaround_total += t + t_cs/2 - running.arrive_turn;
             }
         }
-        // Check for finished I/O
+        // Check for I/O completion
         for (i = 0; i < blocked_n; ++i) {
             if (blocked[i].arrive <= t) {
                 ready_n++;
@@ -244,6 +244,8 @@ int main(int argc, char *argv[]) {
                 }
                 // Terminate if finished
                 else msg_event_q(t, running.id, "terminated", ready, ready_n);
+                turnaround_count++;
+                turnaround_total += t + t_cs/2 - running.arrive_turn;
             }
             else {
                 t++;
@@ -264,6 +266,8 @@ int main(int argc, char *argv[]) {
                     }
                     // Terminate if finished
                     else msg_event_q(t, running.id, "terminated", ready, ready_n);
+                    turnaround_count++;
+                    turnaround_total += t + t_cs/2 - running.arrive_turn;
                 }
             }
         }
@@ -271,6 +275,7 @@ int main(int argc, char *argv[]) {
         for (i = 0; i < blocked_n; ++i) {
             // Preemptive
             if (blocked[i].arrive <= t) {
+                blocked[i].arrive_turn = t;
                 if (blocked[i].burst_time < running.burst_left) {
                     msg_preempt(t, blocked[i].id, running.id, "completed I/O", ready, ready_n);
                     ready_n++;
@@ -304,6 +309,7 @@ int main(int argc, char *argv[]) {
         // Check for new arrivals
         for (i = 0; i < waiting_n; ++i) {
             if (waiting[i].arrive <= t) {
+                waiting[i].arrive_turn = t;
                 // Preemptive
                 if (running_active && waiting[i].burst_left < running.burst_left) {
                     msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
