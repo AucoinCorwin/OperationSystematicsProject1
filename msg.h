@@ -69,3 +69,15 @@ void msg_cpu(int t, struct Process running, struct Process *ready, int n) {
     if (running.burst_left < running.burst_time) printf("with %dms remaining ", running.burst_left);
     msg_queue(ready, n);
 }
+
+void msg_burst(int t, struct Process running, struct Process *ready, int n) {
+    char *plural = "s";
+    if (running.burst_num == 1) plural = "";
+    printf("time %ims: Process %c completed a CPU burst; %i burst%s to go ", t, running.id, running.burst_num, plural);
+    msg_queue(ready, n);
+}
+
+void msg_block(int t, struct Process running, struct Process *ready, int n) {
+    printf("time %ims: Process %c switching out of CPU; will block on I/O until time %ims ", t, running.id, running.arrive);
+    msg_queue(ready, n);
+}

@@ -116,6 +116,7 @@ int main(int argc, char *argv[]) {
     struct Process *blocked = (struct Process*) calloc(n, sizeof(struct Process));
     int blocked_n = 0;
     bool increment;
+    bool add_cs;
     int wait_total = 0;
     int wait_count = 0;
     int turnaround_total = 0;
@@ -124,16 +125,18 @@ int main(int argc, char *argv[]) {
     int preempts = 0;
     msg_sim_start(t, "FCFS", ready, ready_n);
     t--;
+    
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
+        add_cs = false;
         // Set running, if possible/none already
-        if (increment && !running_active && ready_n > 0) { 
+        if (!running_active && ready_n > 0) { 
             running = ready[0];
             running_active = true;
             ready_n--;
             for (i = 0; i < ready_n; i++) ready[i] = ready[i + 1];
             t += t_cs/2;
-            msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+            msg_cpu(t, running, ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
             wait_total += t - running.arrive_wait - t_cs/2;
@@ -143,28 +146,21 @@ int main(int argc, char *argv[]) {
         // Update time if nothing else has been done this tick
         if (increment) {
             t++;
-            //wait_total += ready_n;
             // Update running, if possible
             if (running_active && running.arrive <= t) {
                 running.burst_num--;
                 running_active = false;
+                add_cs = true;
                 // Add to blocked, if possible
                 if (running.burst_num > 0) {
-                    if(running.burst_num == 1)
-                        msg_event_q_i(t, running.id, "completed a CPU burst;", " burst to go", running.burst_num, ready, ready_n);
-                    else
-                        msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
-                    t += t_cs/2;
-                    running.arrive = t + running.io;
-                    msg_event_q_i(t - t_cs/2, running.id, "switching out of CPU; will block on I/O until time", "ms", running.arrive, ready, ready_n);
+                    msg_burst(t, running, ready, ready_n);
+                    running.arrive = t + t_cs/2 + running.io;
+                    msg_block(t, running, ready, ready_n);
                     blocked_n++;
                     blocked[blocked_n - 1] = running;
                 }
                 // Terminate if finished
-                else {
-                    msg_event_q(t, running.id, "terminated", ready, ready_n);
-                    t += t_cs/2;
-                }
+                else msg_event_q(t, running.id, "terminated", ready, ready_n);
             }
         }
         // Check for finished I/O
@@ -192,6 +188,7 @@ int main(int argc, char *argv[]) {
                 increment = false;
             }
         }
+        if (add_cs) t += t_cs/2;
     }
     msg_sim_end(t, "FCFS");
     out_params(argv[1], "FCFS", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);

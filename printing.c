@@ -22,6 +22,9 @@ int main(int argc, char *argv[]) {
     while (fgets(line_g, sizeof(line_g), gen) != NULL) {
         fgets(line_t, sizeof(line_t), out);
         if (line_g[10] == 'S') {
+            #ifdef DEBUG
+                if (line_g[32] != 'F') break;
+            #endif
             printf("\n%s**********************************************\n", line_g);
             fflush(stdout);
         }
