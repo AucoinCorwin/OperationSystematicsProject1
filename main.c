@@ -117,7 +117,6 @@ int main(int argc, char *argv[]) {
     bool running_active = false;
     struct Process *blocked = (struct Process*) calloc(n, sizeof(struct Process));
     int blocked_n = 0;
-    bool increment;
     bool add_cs;
     int wait_total = 0;
     int wait_count = 0;
@@ -128,7 +127,6 @@ int main(int argc, char *argv[]) {
     t--;
     
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
-        increment = true;
         add_cs = false;
         // Set running, if possible/none already
         if (!running_active && ready_n > 0) { 
@@ -142,10 +140,9 @@ int main(int argc, char *argv[]) {
             running.arrive = t + running.burst_time;
             wait_total += t - running.arrive_wait - t_cs/2;
             wait_count++;
-            increment = false;
         }
         // Update time if nothing else has been done this tick
-        if (increment) {
+        else {
             t++;
             // Update running, if possible
             if (running_active && running.arrive <= t) {
@@ -176,7 +173,6 @@ int main(int argc, char *argv[]) {
                 ready[ready_n - 1].arrive_turn = t;
                 blocked_n--;
                 for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
-                increment = false;
             }
         }
         // Check for new arrivals
@@ -190,7 +186,6 @@ int main(int argc, char *argv[]) {
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
                 i--;
-                increment = false;
             }
         }
         if (add_cs) t += t_cs/2;
@@ -214,9 +209,9 @@ int main(int argc, char *argv[]) {
     t--;
     
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
-        increment = true;
+        add_cs = false;
         // Set running, if possible/none already
-        if (increment && !running_active && ready_n > 0) {
+        if (!running_active && ready_n > 0) {
             j = 0;
             for (i = 0; i < ready_n; i++) if (ready[i].burst_left < ready[j].burst_left) j = i;
             running = ready[j];
@@ -230,17 +225,35 @@ int main(int argc, char *argv[]) {
             if (running.burst_left < running.burst_time) wait_total += t - running.arrive_wait;
             else wait_total += t - running.arrive_wait - t_cs/2;
             wait_count++;
-            increment = false;
         }
         // Update time if nothing else has been done this tick
-        if (increment) {
+        else {
             // Update running, if possible
-            if (running_active) {
-                if (running.burst_left <= 0) {
+            if (running_active && running.burst_left <= 0) {
+                running.burst_left = 0;
+                running.burst_num--;
+                running_active = false;
+                add_cs = true;
+                // Add to blocked, if possible
+                if (running.burst_num > 0) {
+                    msg_burst(t, running, ready, ready_n);
+                    running.arrive = t + t_cs/2 + running.io;
+                    msg_block(t, running, ready, ready_n);
+                    blocked_n++;
+                    blocked[blocked_n - 1] = running;
+                }
+                // Terminate if finished
+                else msg_event_q(t, running.id, "terminated", ready, ready_n);
+            }
+            else {
+                t++;
+                running.burst_left--;
+                // Update running, if possible (again)
+                if (running_active && running.burst_left <= 0) {
                     running.burst_left = 0;
                     running.burst_num--;
                     running_active = false;
-                    
+                    add_cs = true;
                     // Add to blocked, if possible
                     if (running.burst_num > 0) {
                         msg_burst(t, running, ready, ready_n);
@@ -251,12 +264,8 @@ int main(int argc, char *argv[]) {
                     }
                     // Terminate if finished
                     else msg_event_q(t, running.id, "terminated", ready, ready_n);
-                    t += t_cs/2;
-                    t--;
                 }
-                else running.burst_left--;
             }
-            t++;
         }
         // Check for I/O completion
         for (i = 0; i < blocked_n; ++i) {
@@ -277,7 +286,6 @@ int main(int argc, char *argv[]) {
                     running.arrive = t + running.burst_time;
                     blocked_n--;
                     for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
-                    increment = false;
                 }
                 // Non-preemptive
                 else {
@@ -289,8 +297,6 @@ int main(int argc, char *argv[]) {
                     msg_event_q(t, blocked[i].id, "completed I/O; added to ready queue", ready, ready_n);
                     blocked_n--;
                     for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
-                    increment = false;
-                    sort(ready, ready_n);
                 }
                 
             }
@@ -322,11 +328,10 @@ int main(int argc, char *argv[]) {
                 }
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
-                increment = false;
                 i--;
             }
         }
-        
+        if (add_cs) t += t_cs/2;
     }
     msg_sim_end(t, "SRT");
     out_params(argv[1], "SRT", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
@@ -342,6 +347,7 @@ int main(int argc, char *argv[]) {
     turnaround_count = 0;
     switches = 0;
     preempts = 0;
+    bool increment;
     for (i = 0; i < n; i++) waiting[i] = array[i];
     msg_sim_start(t, "RR", ready, ready_n);
     t--;
