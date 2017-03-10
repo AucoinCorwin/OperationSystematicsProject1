@@ -206,7 +206,6 @@ int main(int argc, char *argv[]) {
     wait_count = 0;
     switches = 0;
     for (i = 0; i < n; i++) waiting[i] = array[i];
-    char id;
     msg_sim_start(t, "SRT", ready, ready_n);
     t--;
     
@@ -277,7 +276,7 @@ int main(int argc, char *argv[]) {
                     preempts++;
                     running.arrive = t + running.burst_time;
                     blocked_n--;
-                    for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
+                    for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
                 }
                 // Non-preemptive
@@ -286,9 +285,8 @@ int main(int argc, char *argv[]) {
                     ready[ready_n - 1] = blocked[i];
                     ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
                     ready[ready_n - 1].arrive_wait = t;
-                    id = ready[ready_n - 1].id;
                     sort(ready, ready_n);
-                    msg_event_q(t, id, "completed I/O; added to ready queue", ready, ready_n);
+                    msg_event_q(t, blocked[i].id, "completed I/O; added to ready queue", ready, ready_n);
                     blocked_n--;
                     for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
@@ -320,7 +318,7 @@ int main(int argc, char *argv[]) {
                     ready[ready_n - 1] = waiting[i];
                     ready[ready_n - 1].arrive_wait = t;
                     sort(ready, ready_n);
-                    msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
+                    msg_added_ready(t, waiting[i].id, "arrived and", ready, ready_n);
                 }
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
