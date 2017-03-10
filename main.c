@@ -206,6 +206,7 @@ int main(int argc, char *argv[]) {
     wait_count = 0;
     switches = 0;
     for (i = 0; i < n; i++) waiting[i] = array[i];
+    char id;
     msg_sim_start(t, "SRT", ready, ready_n);
     t--;
     
@@ -276,7 +277,7 @@ int main(int argc, char *argv[]) {
                     preempts++;
                     running.arrive = t + running.burst_time;
                     blocked_n--;
-                    for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
+                    for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
                 }
                 // Non-preemptive
@@ -285,8 +286,9 @@ int main(int argc, char *argv[]) {
                     ready[ready_n - 1] = blocked[i];
                     ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
                     ready[ready_n - 1].arrive_wait = t;
+                    id = ready[ready_n - 1].id;
                     sort(ready, ready_n);
-                    msg_event_q(t, blocked[i].id, "completed I/O; added to ready queue", ready, ready_n);
+                    msg_event_q(t, id, "completed I/O; added to ready queue", ready, ready_n);
                     blocked_n--;
                     for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
@@ -299,7 +301,7 @@ int main(int argc, char *argv[]) {
         for (i = 0; i < waiting_n; ++i) {
             if (waiting[i].arrive <= t) {
                 // Preemptive
-                if (running_active && waiting[i].burst_left < running.burst_left) {
+                if (running_active && ready[ready_n - 1].burst_left < running.burst_left) {
                     msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
@@ -318,7 +320,7 @@ int main(int argc, char *argv[]) {
                     ready[ready_n - 1] = waiting[i];
                     ready[ready_n - 1].arrive_wait = t;
                     sort(ready, ready_n);
-                    msg_added_ready(t, waiting[i].id, "arrived and", ready, ready_n);
+                    msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                 }
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
@@ -355,11 +357,14 @@ int main(int argc, char *argv[]) {
             msg_cpu(t, running, ready, ready_n);
             switches++;
             running.arrive = t + t_slice;
-            if(running.burst_left < running.burst_time)
-                wait_total += t - running.arrive_wait;
-            else
+            if(running.burst_left < running.burst_time){
                 wait_total += t - running.arrive_wait - t_cs/2;
-            wait_count++;
+                
+            }
+            else{
+                wait_total += t - running.arrive_wait - t_cs/2;
+                wait_count++;
+            }
             increment = false;
         }
         // Update time if nothing else has been done this tick
