@@ -17,15 +17,27 @@ int main(int argc, char *argv[]) {
     // Go through the outputs
     char line_g[100];
     char line_t[100];
+    char c;
     int i;
     int len;
+    #ifdef DEBUG
+        char limit = 'F';
+        if (argc > 3) limit = toupper(argv[3][0]);
+    #endif
     while (fgets(line_g, sizeof(line_g), gen) != NULL) {
         fgets(line_t, sizeof(line_t), out);
         if (line_g[10] == 'S') {
+            c = line_g[32];
+            if (c != 'F') {
+                printf("\n");
+                #ifdef DEBUG
+                    if (limit == 'F') break;
+                #endif
+            }
             #ifdef DEBUG
-                if (line_g[32] != 'F') break;
+                if (limit == 'S' && line_g[32] == 'R') break;
             #endif
-            printf("\n%s**********************************************\n", line_g);
+            printf("%s**********************************************\n", line_g);
             fflush(stdout);
         }
         len = strlen(line_g);
