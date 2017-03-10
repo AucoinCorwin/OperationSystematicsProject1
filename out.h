@@ -29,9 +29,9 @@ void branch_int(int *i, char a, int fcfs, int srt, int rr) {
 
 void out_params(char *input, char *algo, FILE *output, float burst, int wait_total, int wait_count, int turnaround_total, int turnaround_count, int switches, int preempts) {
     fprintf(output, "Algorithm %s\n", algo);
-    char a = algo[0];
     fprintf(output, "-- average CPU burst time: %.2f ms\n", burst);
     #ifdef DEBUG
+        char a = algo[0];
         char c = input[9];
         float f;
         if (c == '1') f = 403.85;
