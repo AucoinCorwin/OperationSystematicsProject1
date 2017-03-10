@@ -244,19 +244,15 @@ int main(int argc, char *argv[]) {
                     // Add to blocked, if possible
                     if (running.burst_num > 0) {
                         msg_burst(t, running, ready, ready_n);
-                        t += t_cs/2;
-                        running.arrive = t + running.io;
-                        msg_block(t - (t_cs/2), running, ready, ready_n);
+                        running.arrive = t + t_cs/2 + running.io;
+                        msg_block(t, running, ready, ready_n);
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
-                        t--;
                     }
                     // Terminate if finished
-                    else {
-                        msg_event_q(t, running.id, "terminated", ready, ready_n);
-                        t += t_cs/2;
-                        t--;
-                    }
+                    else msg_event_q(t, running.id, "terminated", ready, ready_n);
+                    t += t_cs/2;
+                    t--;
                 }
                 else running.burst_left--;
             }
@@ -303,7 +299,7 @@ int main(int argc, char *argv[]) {
         for (i = 0; i < waiting_n; ++i) {
             if (waiting[i].arrive <= t) {
                 // Preemptive
-                if (running_active && ready[ready_n - 1].burst_left < running.burst_left) {
+                if (running_active && waiting[i].burst_left < running.burst_left) {
                     msg_preempt(t, waiting[i].id, running.id, "arrived", ready, ready_n);
                     ready_n++;
                     ready[ready_n - 1] = running;
