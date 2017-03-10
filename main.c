@@ -48,6 +48,10 @@ int main(int argc, char *argv[]) {
     //int m = 1; // number of processors (i.e. cores) available w/in the CPU
     int t_cs = 6; // time (in ms) it takes to perform a context switch
     int t_slice = 94; // time slice (in ms) for RR
+    #ifdef DEBUG
+        char limit = 'F';
+        if (argc > 3) limit = toupper(argv[3][0]);
+    #endif
     
     // Get all lines from file
     char line[100];
@@ -192,6 +196,9 @@ int main(int argc, char *argv[]) {
     }
     msg_sim_end(t, "FCFS");
     out_params(argv[1], "FCFS", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
+    #ifdef DEBUG
+        if (limit == 'R') exit(EXIT_SUCCESS);
+    #endif
     
     // Shortest Remaining Time (SRT)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
@@ -199,8 +206,10 @@ int main(int argc, char *argv[]) {
     wait_count = 0;
     switches = 0;
     for (i = 0; i < n; i++) waiting[i] = array[i];
+    char id;
     msg_sim_start(t, "SRT", ready, ready_n);
     t--;
+    
     while (ready_n > 0 || waiting_n > 0 || blocked_n > 0 || running_active) {
         increment = true;
         // Set running, if possible/none already
@@ -215,10 +224,8 @@ int main(int argc, char *argv[]) {
             msg_cpu(t, running, ready, ready_n);
             switches++;
             running.arrive = t + running.burst_time;
-            if(running.burst_left < running.burst_time)
-                wait_total += t - running.arrive_wait;
-            else
-                wait_total += t - running.arrive_wait - t_cs/2;
+            if (running.burst_left < running.burst_time) wait_total += t - running.arrive_wait;
+            else wait_total += t - running.arrive_wait - t_cs/2;
             wait_count++;
             increment = false;
         }
@@ -233,13 +240,10 @@ int main(int argc, char *argv[]) {
                     
                     // Add to blocked, if possible
                     if (running.burst_num > 0) {
-                        if(running.burst_num == 1)
-                             msg_event_q_i(t, running.id, "completed a CPU burst;", " burst to go", running.burst_num, ready, ready_n);
-                        else
-                            msg_event_q_i(t, running.id, "completed a CPU burst;", " bursts to go", running.burst_num, ready, ready_n);
+                        msg_burst(t, running, ready, ready_n);
                         t += t_cs/2;
                         running.arrive = t + running.io;
-                        msg_event_q_i(t - (t_cs/2), running.id, "switching out of CPU; will block on I/O until time", "ms", (t + running.io), ready, ready_n);
+                        msg_block(t - (t_cs/2), running, ready, ready_n);
                         blocked_n++;
                         blocked[blocked_n - 1] = running;
                         t--;
@@ -264,26 +268,27 @@ int main(int argc, char *argv[]) {
                     ready_n++;
                     ready[ready_n - 1] = running;
                     ready[ready_n - 1].arrive_wait = t;
+                    sort(ready, ready_n);
                     running = blocked[i];
                     running.burst_left = running.burst_time;
-                    
                     t += t_cs;
-                    msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+                    msg_cpu(t, running, ready, ready_n);
                     switches++;
                     preempts++;
                     running.arrive = t + running.burst_time;
                     blocked_n--;
                     for(j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
-                    sort(ready, ready_n);
                 }
                 // Non-preemptive
                 else {
                     ready_n++;
                     ready[ready_n - 1] = blocked[i];
                     ready[ready_n - 1].burst_left = ready[ready_n - 1].burst_time;
-                    msg_event_q(t, ready[ready_n - 1].id, "completed I/O; added to ready queue", ready, ready_n);
                     ready[ready_n - 1].arrive_wait = t;
+                    id = ready[ready_n - 1].id;
+                    sort(ready, ready_n);
+                    msg_event_q(t, id, "completed I/O; added to ready queue", ready, ready_n);
                     blocked_n--;
                     for (j = i; j < blocked_n; j++) blocked[j] = blocked[j + 1];
                     increment = false;
@@ -304,7 +309,7 @@ int main(int argc, char *argv[]) {
                     sort(ready, ready_n);
                     t += t_cs;
                     running = waiting[i];
-                    msg_event_q(t, running.id, "started using the CPU", ready, ready_n);
+                    msg_cpu(t, running, ready, ready_n);
                     switches++;
                     preempts++;
                     running.arrive = t + running.burst_time;
@@ -313,9 +318,9 @@ int main(int argc, char *argv[]) {
                 else {
                     ready_n++;
                     ready[ready_n - 1] = waiting[i];
-                    msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                     ready[ready_n - 1].arrive_wait = t;
                     sort(ready, ready_n);
+                    msg_added_ready(t, ready[ready_n - 1].id, "arrived and", ready, ready_n);
                 }
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
@@ -327,6 +332,9 @@ int main(int argc, char *argv[]) {
     }
     msg_sim_end(t, "SRT");
     out_params(argv[1], "SRT", output, burst, wait_total, wait_count, turnaround_total, turnaround_count, switches, preempts);
+    #ifdef DEBUG
+        if (limit == 'S') exit(EXIT_SUCCESS);
+    #endif
 
     // Round Robin (RR)
     reset(&t, &ready_n, &waiting_n, n, &waiting, &running_active, &blocked_n, &turnaround_total, &turnaround_count);
