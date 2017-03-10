@@ -7,7 +7,7 @@ float avg(int total, int count) {
 
 void debug_float(float f, float v, FILE *output, char *algo, bool times) {
     float range = 0.01;
-    if (times && algo != "FCFS") range = 2.0;
+    if (times && !strcmp(algo, "FCFS")) range = 2.0;
     if (v - f > range || f - v > range) fprintf(output, "** ERROR: correct value %.2f\n", f);
 }
 
@@ -16,14 +16,14 @@ void debug_int(int i, int v, FILE *output) {
 }
 
 void branch_float(float *f, char *algo, float fcfs, float srt, float rr) {
-    if (algo == "FCFS") *f = fcfs;
-    else if (algo == "SRT") *f = srt;
+    if (strcmp(algo, "FCFS")) *f = fcfs;
+    else if (strcmp(algo, "SRT")) *f = srt;
     else *f = rr;
 }
 
 void branch_int(int *i, char *algo, int fcfs, int srt, int rr) {
-    if (algo == "FCFS") *i = fcfs;
-    else if (algo == "SRT") *i = srt;
+    if (strcmp(algo, "FCFS")) *i = fcfs;
+    else if (strcmp(algo, "SRT")) *i = srt;
     else *i = rr;
 }
 
@@ -79,9 +79,9 @@ void out_params(char *input, char *algo, FILE *output, float burst, int wait_tot
         i = 0;
         if (c == '1') branch_int(&i, algo, 0, 7, 23);
         else if (c == '3') branch_int(&i, algo, 0, 8, 120);
-        else if (c == '4' && algo == "RR") i = 30;
+        else if (c == '4' && strcmp(algo, "RR")) i = 30;
         else if (c == '5') branch_int(&i, algo, 0, 9, 94);
-        else if (c == '6' && algo == "SRT") i = 2;
+        else if (c == '6' && strcmp(algo, "SRT")) i = 2;
         debug_int(i, preempts, output);
     #endif
 }

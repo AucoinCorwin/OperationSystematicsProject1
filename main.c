@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     
     // Simulation Configuration
     int n = 0; // number of processes to simulate; will be determined via input file
-    int m = 1; // number of processors (i.e. cores) available w/in the CPU
+    //int m = 1; // number of processors (i.e. cores) available w/in the CPU
     int t_cs = 6; // time (in ms) it takes to perform a context switch
     int t_slice = 94; // time slice (in ms) for RR
     #ifdef DEBUG
@@ -436,6 +436,7 @@ int main(int argc, char *argv[]) {
                 ready[ready_n - 1].arrive_wait = t;
                 waiting_n--;
                 for (j = i; j < waiting_n; j++) waiting[j] = waiting[j + 1];
+                increment = false;
                 increment = false;
                 i--;
             }
